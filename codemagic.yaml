@@ -18,6 +18,7 @@ workflows:
       - name: Build release APK
         script: flutter build apk --release
     artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
       - build/**/outputs/**/*.apk
       - build/**/outputs/**/mapping.txt
       - flutter_driver.log
