@@ -1,14 +1,32 @@
 workflows:
   flutter-android-release:
+    name: Over the Bike Fit - Android Release Build
     instance_type: mac_mini_m2
+    max_build_duration: 120
+
+    environment:
+      flutter: stable
+
     scripts:
-      - name: 압축 해제 및 경로 이동
+      - name: 압축 해제 및 환경 준비
         script: |
-          unzip over_the_bike_fit.zip
-          # 압축을 풀었을 때 나오는 폴더 이름을 아래에 정확히 적으세요.
-          cd over_the_bike_fit 
+          # 현재 경로의 모든 zip 파일을 찾아서 압축을 풉니다.
+          unzip *.zip
+          
+          # 압축이 풀린 폴더로 이동합니다. 
+          # (폴더명을 몰라도 이동할 수 있게 처리)
+          PROJECT_DIR=$(find . -maxdepth 1 -type d -not -path '.*' | head -n 1)
+          cd "$PROJECT_DIR"
+          
+          # Flutter 의존성 가져오기
           flutter pub get
+          
       - name: Build APK
         script: |
-          cd over_the_bike_fit
+          # 위에서 찾은 폴더로 다시 이동하여 빌드합니다.
+          PROJECT_DIR=$(find . -maxdepth 1 -type d -not -path '.*' | head -n 1)
+          cd "$PROJECT_DIR"
           flutter build apk --release
+
+    artifacts:
+      - "**/build/app/outputs/flutter-apk/app-release.apk"
