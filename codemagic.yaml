@@ -6,13 +6,11 @@ workflows:
       flutter: stable
       java: 17
     scripts:
-      - name: Clean and Recreate Android Folder
+      - name: Recreate Android Folder
         script: |
           flutter clean
           rm -rf android
           flutter create --platforms android .
-          # 스마트 워치 기능을 위해 최소 SDK 버전을 26으로 자동 변경합니다.
-          sed -i 's/minSdkVersion .*/minSdkVersion 26/' android/app/build.gradle
       - name: Get Flutter packages
         script: |
           flutter pub get
