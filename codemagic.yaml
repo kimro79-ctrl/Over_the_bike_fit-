@@ -3,20 +3,15 @@ workflows:
     name: Android Release Build
     max_build_duration: 60
     instance_type: mac_mini_m1
-    working_directory: over_the_bike_fit  # 리포지토리 내의 실제 폴더명
+    # 폴더 안으로 들어가서 빌드하도록 설정합니다.
+    working_directory: over_the_bike_fit 
     environment:
       flutter: stable
       java: 17
     scripts:
       - name: Get Flutter packages
-        script: |
-          flutter pub get
+        script: flutter pub get
       - name: Build APK
-        script: |
-          flutter build apk --release
+        script: flutter build apk --release
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
-    publishing:
-      email:
-        recipients:
-          - YOUR_EMAIL@example.com
