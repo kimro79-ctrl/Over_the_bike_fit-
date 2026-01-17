@@ -8,7 +8,8 @@ workflows:
     scripts:
       - name: Clean and Recreate Android Folder
         script: |
-          # 기존 꼬인 설정을 삭제하고 안드로이드 빌드 환경을 강제 생성합니다.
+          # 기존 설정을 지우고 깨끗하게 다시 시작합니다.
+          flutter clean
           rm -rf android
           flutter create --platforms android .
       - name: Get Flutter packages
@@ -16,6 +17,7 @@ workflows:
           flutter pub get
       - name: Build APK
         script: |
-          flutter build apk --release --clean
+          # --clean 옵션을 빼고 빌드 명령어를 실행합니다.
+          flutter build apk --release
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
