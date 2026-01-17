@@ -53,11 +53,16 @@ class _CyclingHomeScreenState extends State<CyclingHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(image: DecorationImage(image: AssetImage('assets/background.png'), fit: BoxFit.cover)),
+        decoration: const BoxDecoration(
+          image: DecorationImage(image: AssetImage('assets/background.png'), fit: BoxFit.cover),
+        ),
         child: SafeArea(
           child: Column(
             children: [
-              const Padding(padding: EdgeInsets.all(20), child: Text('CYCLE FIT', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.redAccent))),
+              const Padding(
+                padding: EdgeInsets.all(20),
+                child: Text('CYCLE FIT', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.redAccent)),
+              ),
               _buildChartCard(),
               const Spacer(),
               _buildInfoRow(),
@@ -74,12 +79,40 @@ class _CyclingHomeScreenState extends State<CyclingHomeScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
       height: 250,
-      decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.redAccent.withOpacity(0.5))),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.redAccent.withOpacity(0.5)),
+      ),
       child: Column(
         children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text("실시간 심박수"), Text("${heartRate.toInt()} bpm", style: const TextStyle(fontSize: 24, color: Colors.redAccent, fontWeight: FontWeight.bold))]),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text("실시간 심박수", style: TextStyle(color: Colors.white70)),
+              Text("${heartRate.toInt()} bpm", style: const TextStyle(fontSize: 24, color: Colors.redAccent, fontWeight: FontWeight.bold)),
+            ],
+          ),
           const SizedBox(height: 20),
-          Expanded(child: LineChart(LineChartData(gridData: const FlGridData(show: false), titlesData: const FlTitlesData(show: false), borderData: FlBorderData(show: false), lineBarsData: [LineChartBarData(spots: hrPoints, isCurved: true, color: Colors.redAccent, barWidth: 3, dotData: const FlDotData(show: false), belowBarData: BarAreaData(show: true, color: Colors.redAccent.withOpacity(0.2)))]))),
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                gridData: const FlGridData(show: false),
+                titlesData: const FlTitlesData(show: false),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: hrPoints,
+                    isCurved: true,
+                    color: Colors.redAccent,
+                    barWidth: 3,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(show: true, color: Colors.redAccent.withOpacity(0.2)),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -88,21 +121,48 @@ class _CyclingHomeScreenState extends State<CyclingHomeScreen> {
   Widget _buildInfoRow() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(children: [_info('운동시간', _format(seconds), Colors.redAccent), const SizedBox(width: 10), _info('목표', '20분', Colors.white)]),
+      child: Row(
+        children: [
+          _infoBox('운동시간', _formatTime(seconds), Colors.redAccent),
+          const SizedBox(width: 10),
+          _infoBox('목표', '20분', Colors.white),
+        ],
+      ),
     );
   }
 
   Widget _buildButtons() {
     return Padding(
       padding: const EdgeInsets.all(20),
-      child: Row(children: [
-        Expanded(child: ElevatedButton(onPressed: toggleTimer, style: ElevatedButton.styleFrom(backgroundColor: isRunning ? Colors.red[900] : Colors.red, padding: const EdgeInsets.all(15)), child: Text(isRunning ? '정지' : '시작'))),
-        const SizedBox(width: 10),
-        Expanded(child: ElevatedButton(onPressed: () => setState(() { seconds = 0; isRunning = false; timer?.cancel(); }), style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[800], padding: const EdgeInsets.all(15)), child: const Text('리셋'))),
-      ]),
+      child: Row(
+        children: [
+          Expanded(
+            child: ElevatedButton(
+              onPressed: toggleTimer,
+              style: ElevatedButton.styleFrom(backgroundColor: isRunning ? Colors.red[900] : Colors.red, padding: const EdgeInsets.all(15)),
+              child: Text(isRunning ? '정지' : '시작', style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () => setState(() { seconds = 0; isRunning = false; timer?.cancel(); }),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[800], padding: const EdgeInsets.all(15)),
+              child: const Text('리셋'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _info(String t, String v, Color c) => Expanded(child: Container(padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(15)), child: Column(children: [Text(t, style: const TextStyle(color: Colors.white54)), Text(v, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: c))])));
-  String _format(int s) => '${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}';
+  Widget _infoBox(String t, String v, Color c) => Expanded(
+    child: Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(15)),
+      child: Column(children: [Text(t, style: const TextStyle(color: Colors.white54)), Text(v, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: c))]),
+    ),
+  );
+
+  String _formatTime(int s) => '${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}';
 }
