@@ -1,7 +1,8 @@
 workflows:
   android-workflow:
     name: Android Release Build
-    working_directory: .
+    # 저장소 루트에 pubspec.yaml이 있다면 아래처럼 마침표(.) 하나만 찍으세요.
+    working_directory: . 
     environment:
       flutter: stable
       java: 17
