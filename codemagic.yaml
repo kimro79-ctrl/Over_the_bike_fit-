@@ -3,17 +3,24 @@ workflows:
     name: Android Release Build
     max_build_duration: 60
     instance_type: mac_mini_m1
+    # 만약 프로젝트가 리포지토리 안의 특정 폴더에 있다면 아래 경로를 수정하세요
+    # 예: working_directory: Over_the_bike_fit 
     environment:
       flutter: stable
       java: 17
     scripts:
       - name: Get Flutter packages
-        script: flutter pub get
+        script: |
+          # 프로젝트 폴더로 이동 (폴더 이름이 다르다면 그에 맞게 수정하세요)
+          cd $CM_BUILD_DIR 
+          flutter pub get
       - name: Build APK
-        script: flutter build apk --release
+        script: |
+          cd $CM_BUILD_DIR
+          flutter build apk --release
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
     publishing:
       email:
         recipients:
-          - YOUR_EMAIL@example.com # 본인 이메일로 수정
+          - YOUR_EMAIL@example.com
