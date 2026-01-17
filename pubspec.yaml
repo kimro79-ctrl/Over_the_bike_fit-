@@ -1,8 +1,6 @@
 name: over_the_bike_fit
-description: A new Flutter project for cycling fit with neon design.
-publish_to: 'none' # 배포용이 아니면 그대로 둡니다.
-
-# 앱 버전 설정
+description: Cycling app with neon design and charts.
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
@@ -11,17 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # 아이콘 팩
   cupertino_icons: ^1.0.2
-
-  # 실시간 심박수 그래프 구현을 위한 라이브러리
   fl_chart: ^0.66.0
-
-  # 스마트 워치(삼성 헬스, 구글 핏, 애플 건강) 데이터 동기화
-  health: ^10.0.0
-
-  # 워치 데이터 접근 권한 요청을 위한 라이브러리
+  health: ^9.1.0  # 빌드 에러 해결을 위해 버전을 낮췄습니다.
   permission_handler: ^11.0.0
 
 dev_dependencies:
@@ -30,11 +20,7 @@ dev_dependencies:
   flutter_lints: ^2.0.0
 
 flutter:
-  # 머티리얼 디자인 아이콘 사용
   uses-material-design: true
-
-  # 앱에서 사용할 이미지 에셋 등록
-  # 경로와 파일명이 GitHub 저장소와 정확히 일치해야 합니다.
   assets:
     - assets/background.png
     - assets/icon/heart.png
