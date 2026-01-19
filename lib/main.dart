@@ -30,77 +30,152 @@ class WorkoutScreen extends StatefulWidget {
 
 class _WorkoutScreenState extends State<WorkoutScreen> {
   int bpm = 0;
-  int targetMinutes = 20; // 목표 시간 기본값
+  int targetMinutes = 20;
   int elapsedSeconds = 0;
   bool isRunning = false;
   String watchStatus = "탭하여 워치 연결";
   List<double> heartPoints = List.generate(45, (index) => 10.0);
   List<String> workoutHistory = [];
-  
+
   BluetoothDevice? connectedDevice;
   StreamSubscription? hrSubscription;
+  StreamSubscription? scanSubscription;
   Timer? workoutTimer;
 
   @override
   void initState() {
     super.initState();
     Future.delayed(const Duration(seconds: 3), () => FlutterNativeSplash.remove());
+    FlutterBluePlus.setLogLevel(LogLevel.verbose); // 디버깅용
   }
 
-  // 워치 연결 로직 (기존 유지)
-  void _connectWatch() async {
-    setState(() => watchStatus = "워치 찾는 중...");
-    await FlutterBluePlus.startScan(withServices: [Guid("180d")], timeout: const Duration(seconds: 5));
-    FlutterBluePlus.scanResults.listen((results) async {
+  Future<void> _connectWatch() async {
+    setState(() => watchStatus = "블루투스 확인 중...");
+
+    // 어댑터 상태 대기
+    if (await FlutterBluePlus.adapterState.first != BluetoothAdapterState.on) {
+      setState(() => watchStatus = "블루투스 꺼짐");
+      return;
+    }
+
+    setState(() => watchStatus = "주변 워치 검색 중...");
+
+    // 기존 스캔 정리
+    scanSubscription?.cancel();
+
+    // Heart Rate Service 필터링 스캔
+    scanSubscription = FlutterBluePlus.onScanResults.listen((results) async {
       for (ScanResult r in results) {
-        if (connectedDevice == null) {
+        if (r.advertisementData.serviceUuids.any((g) => g == Guid("180d"))) {
           await FlutterBluePlus.stopScan();
-          _establishConnection(r.device);
+          await _establishConnection(r.device);
           break;
         }
       }
     });
+
+    await FlutterBluePlus.startScan(
+      withServices: [Guid("180d")],
+      timeout: const Duration(seconds: 10),
+    );
+
+    FlutterBluePlus.cancelWhenScanComplete(scanSubscription!);
   }
 
-  void _establishConnection(BluetoothDevice device) async {
+  Future<void> _establishConnection(BluetoothDevice device) async {
     try {
-      await device.connect();
-      setState(() { connectedDevice = device; watchStatus = "${device.platformName} 연결됨"; });
-      List<BluetoothService> services = await device.discoverServices();
-      for (var service in services) {
-        if (service.uuid == Guid("180d")) {
-          for (var char in service.characteristics) {
-            if (char.uuid == Guid("2a37")) {
-              await char.setNotifyValue(true);
-              hrSubscription = char.lastValueStream.listen((value) {
-                if (value.isNotEmpty && mounted) {
-                  setState(() {
-                    bpm = value[1];
-                    heartPoints.add(bpm.toDouble() / 5);
-                    heartPoints.removeAt(0);
-                  });
-                }
-              });
-            }
-          }
+      setState(() => watchStatus = "${device.platformName} 연결 시도...");
+      await device.connect(timeout: const Duration(seconds: 10));
+
+      setState(() {
+        connectedDevice = device;
+        watchStatus = "${device.platformName} 연결됨";
+      });
+
+      // 연결 끊김 시 정리
+      device.cancelWhenDisconnected(device.connectionState.listen((state) {
+        if (state == BluetoothConnectionState.disconnected) {
+          setState(() {
+            watchStatus = "연결 끊김 • 재연결 시도";
+            bpm = 0;
+          });
+          hrSubscription?.cancel();
+          Future.delayed(const Duration(seconds: 3), _connectWatch); // 자동 재시도
         }
-      }
-    } catch (e) { setState(() => watchStatus = "연결 실패: 재시도"); }
+      }));
+
+      final services = await device.discoverServices();
+      final hrService = services.firstWhere(
+        (s) => s.uuid == Guid("180d"),
+        orElse: () => throw "HR 서비스 없음",
+      );
+
+      final hrChar = hrService.characteristics.firstWhere(
+        (c) => c.uuid == Guid("2a37"),
+        orElse: () => throw "HR 특성 없음",
+      );
+
+      await hrChar.setNotifyValue(true);
+
+      hrSubscription = hrChar.onValueReceived.listen((value) {
+        if (!mounted) return;
+        final parsedBpm = _parseHeartRate(value);
+        if (parsedBpm != null) {
+          setState(() {
+            bpm = parsedBpm;
+            heartPoints.add(parsedBpm.toDouble() / 5);
+            if (heartPoints.length > 45) heartPoints.removeAt(0);
+          });
+        }
+      });
+    } catch (e) {
+      setState(() => watchStatus = "연결 실패: $e • 재시도");
+      await device.disconnect();
+    }
+  }
+
+  int? _parseHeartRate(List<int> value) {
+    if (value.isEmpty) return null;
+    final flags = value[0];
+    final is16bit = (flags & 0x01) != 0;
+
+    if (is16bit) {
+      if (value.length < 3) return null;
+      return value[1] | (value[2] << 8);
+    } else {
+      if (value.length < 2) return null;
+      return value[1];
+    }
   }
 
   void _toggleWorkout() {
     setState(() {
       isRunning = !isRunning;
       if (isRunning) {
-        workoutTimer = Timer.periodic(const Duration(seconds: 1), (t) => setState(() => elapsedSeconds++));
-      } else { workoutTimer?.cancel(); }
+        workoutTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+          setState(() {
+            elapsedSeconds++;
+            if (elapsedSeconds >= targetMinutes * 60) {
+              timer.cancel();
+              isRunning = false;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("목표 $targetMinutes분 달성! 운동 종료")),
+              );
+            }
+          });
+        });
+      } else {
+        workoutTimer?.cancel();
+      }
     });
   }
 
   @override
   void dispose() {
+    scanSubscription?.cancel();
     hrSubscription?.cancel();
     workoutTimer?.cancel();
+    connectedDevice?.disconnect();
     super.dispose();
   }
 
@@ -115,13 +190,13 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           child: Column(
             children: [
               const SizedBox(height: 40),
-              // 세련된 타이틀
               ShaderMask(
                 shaderCallback: (bounds) => const LinearGradient(colors: [Colors.white, Colors.redAccent]).createShader(bounds),
-                child: const Text("OVER THE BIKE FIT", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 6, fontStyle: FontStyle.italic)),
+                child: const Text(
+                  "OVER THE BIKE FIT",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 6, fontStyle: FontStyle.italic),
+                ),
               ),
-              
-              // 워치 연결 상태
               GestureDetector(
                 onTap: _connectWatch,
                 child: Container(
@@ -132,17 +207,17 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                     border: Border.all(color: connectedDevice != null ? Colors.greenAccent : Colors.redAccent.withOpacity(0.5)),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.watch, size: 14, color: connectedDevice != null ? Colors.greenAccent : Colors.grey),
-                    const SizedBox(width: 8),
-                    Text(watchStatus, style: TextStyle(fontSize: 11, color: connectedDevice != null ? Colors.greenAccent : Colors.white)),
-                  ]),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.watch, size: 14, color: connectedDevice != null ? Colors.greenAccent : Colors.grey),
+                      const SizedBox(width: 8),
+                      Text(watchStatus, style: TextStyle(fontSize: 11, color: connectedDevice != null ? Colors.greenAccent : Colors.white)),
+                    ],
+                  ),
                 ),
               ),
-
               const Spacer(),
-              
-              // 중앙 디스플레이: 워치 연결 시 심박수, 아니면 기본 정보
               if (bpm > 0) ...[
                 Text("$bpm", style: const TextStyle(fontSize: 90, fontWeight: FontWeight.bold)),
                 const Text("BPM", style: TextStyle(color: Colors.redAccent, letterSpacing: 5)),
@@ -151,19 +226,13 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 const SizedBox(height: 10),
                 const Text("READY TO RIDE", style: TextStyle(color: Colors.grey, letterSpacing: 3)),
               ],
-
               const Spacer(),
-
-              // 정보 섹션 및 시간 조정 버튼
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    // 운동시간 표시
-                    statUnit("운동시간", "${(elapsedSeconds ~/ 60).toString().padLeft(2, '0')}:${(elapsedSeconds % 60).toString().padLeft(2, '0')}", Colors.redAccent),
-                    
-                    // [부활] 목표시간 조정 섹션
+                    statUnit("운동시간", "\( {(elapsedSeconds ~/ 60).toString().padLeft(2, '0')}: \){(elapsedSeconds % 60).toString().padLeft(2, '0')}", Colors.redAccent),
                     Column(
                       children: [
                         const Text("목표시간", style: TextStyle(color: Colors.grey, fontSize: 10)),
@@ -185,10 +254,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 30),
-
-              // 하단 버튼 3등분 밸런스
               Container(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 50),
                 child: Row(
@@ -197,13 +263,13 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                     const SizedBox(width: 10),
                     actionBtn("저장", Colors.green.withOpacity(0.7), () {
                       if (elapsedSeconds > 0) {
-                        workoutHistory.add("${DateTime.now().hour}:${DateTime.now().minute} - ${elapsedSeconds ~/ 60}분 운동");
+                        workoutHistory.add("\( {DateTime.now().hour.toString().padLeft(2, '0')}: \){DateTime.now().minute.toString().padLeft(2, '0')} - ${elapsedSeconds ~/ 60}분");
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("기록 완료")));
                       }
                     }),
                     const SizedBox(width: 10),
                     actionBtn("기록", Colors.blueGrey, () {
-                      // 기록 보기 로직 추가 가능
+                      // 나중에 BottomSheet나 새 화면으로 workoutHistory 보여주기
                     }),
                   ],
                 ),
@@ -215,17 +281,19 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     );
   }
 
-  Widget statUnit(String label, String val, Color col) => Column(children: [Text(label, style: const TextStyle(color: Colors.grey, fontSize: 10)), const SizedBox(height: 10), Text(val, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: col))]);
+  Widget statUnit(String label, String val, Color col) => Column(
+        children: [Text(label, style: const TextStyle(color: Colors.grey, fontSize: 10)), const SizedBox(height: 10), Text(val, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: col))],
+      );
 
   Widget actionBtn(String label, Color col, VoidCallback fn) => Expanded(
-    child: ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: col, 
-        padding: const EdgeInsets.symmetric(vertical: 18), 
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
-      ),
-      onPressed: fn, 
-      child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold))
-    )
-  );
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: col,
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          onPressed: fn,
+          child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+      );
 }
