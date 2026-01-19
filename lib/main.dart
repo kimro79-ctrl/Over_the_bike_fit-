@@ -88,7 +88,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     } catch (e) { setState(() => watchStatus = "연결 실패: 재시도"); }
   }
 
-  // --- UI 구성 함수들 ---
+  // --- UI 보조 위젯 함수들 (클래스 내부에 정확히 위치) ---
   Widget _infoBox(String label, String value, Color color) {
     return Column(children: [
       Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
@@ -127,7 +127,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(image: DecorationImage(image: AssetImage("assets/background.png"), fit: BoxFit.cover)),
+        decoration: const BoxDecoration(
+          image: DecorationImage(image: AssetImage("assets/background.png"), fit: BoxFit.cover)
+        ),
         child: SafeArea(
           child: Column(
             children: [
@@ -144,7 +146,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 ),
               ),
 
-              // 슬림 배너 (상단 배치)
+              // 상단 슬림 배너
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 5),
                 padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
@@ -195,7 +197,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
               const Spacer(),
 
-              // 하단 정보 및 버튼 3개
+              // 하단 정보 및 버튼 3개 (기록 포함)
               Container(
                 padding: const EdgeInsets.only(bottom: 20),
                 child: Column(
