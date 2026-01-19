@@ -1,36 +1,39 @@
-name: over_the_bike_fit
-description: Premium bike fitness app with Smartwatch sync.
+name: bike_fit_app
+description: 실내 바이크 핏 & 심박수 기반 운동 트래커
+publish_to: 'none'
+
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.2.0 <4.0.0'          # 2026년 기준 안정적 범위
+  flutter: '>=3.22.0'            # flutter_blue_plus가 잘 동작하는 최소 버전
 
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.2
-  flutter_native_splash: ^2.3.1
-  flutter_blue_plus: ^1.31.1 # 스마트워치 연동용
+  flutter_blue_plus: ^2.1.0      # 최신 BLE 플러그인
+  flutter_native_splash: ^2.4.1  # 스플래시 유지 (버전 최신화 추천)
+
+  # 추가 추천 (실사용성 ↑)
+  permission_handler: ^11.3.1    # 블루투스/위치 권한 런타임 요청
+  device_info_plus: ^10.1.0      # 기기 정보로 플랫폼별 처리 분기
+  intl: ^0.19.0                  # 날짜/시간 포맷팅
+  shared_preferences: ^2.3.0     # 운동 기록 로컬 저장 (workoutHistory 영속화)
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: ^0.13.1
+  flutter_lints: ^4.0.0
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/background.png
-    - assets/splash/splash_screen.png
-    # 아이콘 파일 업로드 후 아래 주석(#)을 제거하세요.
-    # - assets/icon/app_icon.png
 
-flutter_native_splash:
-  color: "#000000"
-  image: assets/splash/splash_screen.png
-  android_12:
-    image: assets/splash/splash_screen.png
+  assets:
+    - assets/background.png      # 배경 이미지 경로 확인 필수
+
+  # 스플래시 설정 (flutter_native_splash와 함께 사용)
+  flutter_native_splash:
     color: "#000000"
-  fullscreen: true
-  android_gravity: fill # 스플래시 화면 꽉 채우기
-  ios_content_mode: scaleAspectFill
+    image: assets/splash.png     # 실제 스플래시 이미지 경로로 교체
+    android: true
+    ios: true
