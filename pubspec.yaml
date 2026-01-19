@@ -3,7 +3,7 @@ description: A sporty and minimal fitness tracking Flutter app
 publish_to: "none"
 
 environment:
-  sdk: ">=3.0.0 <4.0.0" # 최신 빌드 환경을 위해 SDK 버전을 올렸습니다.
+  sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -18,9 +18,11 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # 이미지 파일명과 경로를 업로드하신 폴더 구조에 맞게 맞췄습니다.
   assets:
+    # 배경 이미지
     - assets/background.png
+    # 아이콘 폴더 내 파일 (이미지 경로 반영)
     - assets/icons/heart.png
     - assets/icons/bike_ui_dark.png
+    # 스플래시 폴더 내 파일
     - assets/splash/splash_screen.png
