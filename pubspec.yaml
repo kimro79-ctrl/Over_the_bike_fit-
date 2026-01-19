@@ -10,30 +10,20 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.2
   flutter_native_splash: ^2.3.1
-  flutter_blue_plus: ^1.31.1 # 스마트워치 연동 필수 라이브러리
+  flutter_blue_plus: ^1.31.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
   assets:
     - assets/background.png
     - assets/splash/splash_screen.png
-    # 아이콘 파일 업로드 전에는 아래 줄을 주석 처리해야 빌드 에러가 나지 않습니다.
+    # 아이콘 파일이 확실히 업로드된 후 아래 주석을 푸세요.
     # - assets/icon/app_icon.png
 
-# 앱 아이콘 설정 (아이콘 파일 준비 시 사용)
-flutter_launcher_icons:
-  android: true
-  ios: true
-  image_path: "assets/icon/app_icon.png"
-  adaptive_icon_background: "#000000"
-  adaptive_icon_foreground: "assets/icon/app_icon.png"
-
-# 스플래시 화면 설정 (화면 가득 채우기 적용)
 flutter_native_splash:
   color: "#000000"
   image: assets/splash/splash_screen.png
@@ -41,5 +31,5 @@ flutter_native_splash:
     image: assets/splash/splash_screen.png
     color: "#000000"
   fullscreen: true
-  android_gravity: fill # 안드로이드에서 화면 꽉 채우기
-  ios_content_mode: scaleAspectFill # iOS에서 화면 꽉 채우기
+  android_gravity: fill
+  ios_content_mode: scaleAspectFill
