@@ -1,6 +1,5 @@
 name: over_the_bike_fit
-description: A premium bike fitness app with neon UI.
-publish_to: 'none'
+description: Premium bike fitness app.
 version: 1.0.0+1
 
 environment:
@@ -15,7 +14,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
+  # 앱 아이콘 변경을 위한 라이브러리
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
@@ -23,7 +23,17 @@ flutter:
     - assets/background.png
     - assets/icon/heart.png
     - assets/splash/splash_screen.png
+    - assets/icon/app_icon.png # 아이콘 파일을 이 경로에 넣어주세요.
 
+# 앱 아이콘 설정
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
+
+# 스플래시 화면 설정 (화면 가득 차게)
 flutter_native_splash:
   color: "#000000"
   image: assets/splash/splash_screen.png
@@ -31,3 +41,4 @@ flutter_native_splash:
     image: assets/splash/splash_screen.png
     color: "#000000"
   fullscreen: true
+  image_side: center # 이미지가 중앙에서 가득 차 보이도록 설정
