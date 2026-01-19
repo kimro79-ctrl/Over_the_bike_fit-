@@ -1,17 +1,24 @@
 name: over_the_bike_fit
-description: Cycling app with neon design and charts.
-version: 1.0.0+1
+description: Over the Bike Fit – Indoor Cycling Tracker (Neon Edition)
+publish_to: "none"
+
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: ">=2.17.0 <3.0.0"
+
 dependencies:
   flutter:
     sdk: flutter
-  fl_chart: ^0.66.0
-  health: ^13.2.1
-  permission_handler: ^11.0.0
+  shared_preferences: ^2.1.0
+  flutter_blue_plus: ^2.1.0
+  fl_chart: ^0.68.0
+
 flutter:
   uses-material-design: true
   assets:
+    - assets/icons/heart.png
+    - assets/icons/bike_ui_dark.png
+    - assets/icons/button_start.png
+    - assets/icons/button_stop.png
+    - assets/icons/button_save.png
+    - assets/splash/splash_screen.png
     - assets/background.png
-    - assets/icon/heart.png
-    - assets/icon/bike_ui_dark.png
