@@ -17,13 +17,12 @@ flutter:
   assets:
     - assets/background.png
     - assets/icon/heart.png
-    - assets/icon/bike_ui_dark.png
-    - assets/splash_screen.png # 경로를 이미지 위치에 맞게 수정함
+    - assets/splash/splash_screen.png # 폴더 경로 반영
 
 flutter_native_splash:
   color: "#000000"
-  image: assets/splash_screen.png # 경로 수정
+  image: assets/splash/splash_screen.png # 폴더 경로 반영
   android_12:
-    image: assets/splash_screen.png # 경로 수정
+    image: assets/splash/splash_screen.png
     color: "#000000"
   fullscreen: true
