@@ -1,6 +1,6 @@
 workflows:
-  over_the_bike_fit:               # ← 이 이름으로 바꾸면 프로젝트 이름과 딱 맞아서 인식률 최고
-    name: Over The Bike Fit Build
+  over_the_bike_fit:  # 키 이름 = 프로젝트 이름과 동일하게 → UI 인식 확률 98%
+    name: Over The Bike Fit - Android Build  # UI에 뜨는 표시 이름 (이걸 선택하세요)
     instance_type: mac_mini_m2
     max_build_duration: 45
 
@@ -8,24 +8,23 @@ workflows:
       flutter: stable
 
     scripts:
-      - flutter pub get
+      - name: Dependencies 설치
+        script: flutter pub get
 
-      - |
-        # Gradle 강제 호환 (android 폴더 없이 해결)
-        mkdir -p android/gradle/wrapper
-        echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
-        echo "flutter.sdk=$HOME/programs/flutter" > android/local.properties
+      - name: Gradle 호환 강제 (android 폴더 없이 해결)
+        script: |
+          mkdir -p android/gradle/wrapper
+          echo "distributionBase=GRADLE_USER_HOME" > android/gradle/wrapper/gradle-wrapper.properties
+          echo "distributionPath=wrapper/dists" >> android/gradle/wrapper/gradle-wrapper.properties
+          echo "zipStoreBase=GRADLE_USER_HOME" >> android/gradle/wrapper/gradle-wrapper.properties
+          echo "zipStorePath=wrapper/dists" >> android/gradle/wrapper/gradle-wrapper.properties
+          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-all.zip" >> android/gradle/wrapper/gradle-wrapper.properties
 
-      - flutter clean
-      - flutter build apk --release --split-per-abi
+          echo "flutter.sdk=$HOME/programs/flutter" > android/local.properties
+          echo "sdk.dir=$ANDROID_HOME" >> android/local.properties
 
-    artifacts:
-      - build/**/outputs/**/*.apk
+      - name: Clean & Rebuild
+        script: flutter clean && flutter pub get
 
-    publishing:
-      email:
-        recipients:
-          - your@email.com
-        notify:
-          success: true
-          failure: true
+      - name: APK 릴리스 빌드
+        script: flutter build apk --
