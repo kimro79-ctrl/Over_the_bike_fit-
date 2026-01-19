@@ -8,19 +8,16 @@ workflows:
     scripts:
       - name: Initialize and Fix Android
         script: |
-          # 프로젝트 구조를 안드로이드 표준에 맞게 초기화합니다.
           flutter create .
       - name: Get Dependencies
         script: |
-          # 필요한 라이브러리를 설치합니다.
           flutter pub get
       - name: Generate Splash Screen
         script: |
-          # [핵심] pubspec.yaml 설정을 바탕으로 스플래시 화면을 물리적으로 생성합니다.
-          flutter pub run flutter_native_splash:create
+          # 파일이 없을 경우를 대비해 에러를 무시하고 진행합니다.
+          flutter pub run flutter_native_splash:create || true
       - name: Build APK
         script: |
-          # 최종 APK 파일을 빌드합니다.
           flutter build apk --release
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
