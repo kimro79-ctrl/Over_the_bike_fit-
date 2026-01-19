@@ -1,17 +1,14 @@
 workflows:
-  android-workflow:
-    name: Android Release Build
-    working_directory: . 
+  flutter-app:
+    name: Over the Bike Fit
     environment:
       flutter: stable
-      java: 17
+      xcode: latest
+      android: latest
     scripts:
-      - name: Get Flutter packages
-        script: |
-          flutter pub get
-      - name: Build APK
-        script: |
-          # 복잡한 옵션 없이 표준 빌드를 진행합니다.
-          flutter build apk --release
+      - name: Get packages
+        script: flutter pub get
+      - name: Build release APK
+        script: flutter build apk --release
     artifacts:
-      - build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/flutter-apk/app-release.apk
