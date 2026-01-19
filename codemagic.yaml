@@ -1,15 +1,26 @@
 workflows:
-  android-build:
+  android-workflow:
     name: Build Android APK
     instance_type: mac_mini_m2
+    max_build_duration: 60
     environment:
       flutter: stable
     scripts:
-      - name: Fix Android Files
-        script: flutter create .
-      - name: Get packages
-        script: flutter pub get
+      - name: Initialize and Fix Android
+        script: |
+          # 프로젝트 구조를 안드로이드 표준에 맞게 초기화합니다.
+          flutter create .
+      - name: Get Dependencies
+        script: |
+          # 필요한 라이브러리를 설치합니다.
+          flutter pub get
+      - name: Generate Splash Screen
+        script: |
+          # [핵심] pubspec.yaml 설정을 바탕으로 스플래시 화면을 물리적으로 생성합니다.
+          flutter pub run flutter_native_splash:create
       - name: Build APK
-        script: flutter build apk --release
+        script: |
+          # 최종 APK 파일을 빌드합니다.
+          flutter build apk --release
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
