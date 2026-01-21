@@ -62,10 +62,10 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     }
   }
 
-  // 심박수가 85 이상일 때만 칼로리가 쌓이도록 수정 (가만히 있을 때 방지)
+  // 심박수 85 이상일 때만 칼로리 계산 (정지 상태 상승 방지)
   double _calculateCalories(int currentBpm) {
     if (currentBpm < 85) return 0.0;
-    return (currentBpm - 70) * 0.0015; 
+    return (currentBpm - 70) * 0.0016; 
   }
 
   void _startScan() async {
@@ -136,26 +136,26 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 onTap: _startScan,
                 child: Container(
                   margin: const EdgeInsets.symmetric(vertical: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(border: Border.all(color: neonColor), borderRadius: BorderRadius.circular(15)),
-                  child: Text(watchStatus, style: const TextStyle(fontSize: 10, color: neonColor)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(border: Border.all(color: neonColor.withOpacity(0.5)), borderRadius: BorderRadius.circular(15)),
+                  child: Text(watchStatus, style: const TextStyle(fontSize: 9, color: neonColor)),
                 ),
               ),
 
-              // 심박수 영역
+              // 심박수 영역 (콤팩트 축소)
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 5),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(15)),
                 child: Row(
                   children: [
                     Column(children: [
                       const Text("BPM", style: TextStyle(fontSize: 9, color: Colors.white54)),
-                      Text("${bpm > 0 ? bpm : '--'}", style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: neonColor)),
+                      Text("${bpm > 0 ? bpm : '--'}", style: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: neonColor)),
                     ]),
                     const SizedBox(width: 20),
                     Expanded(
-                      child: SizedBox(height: 40, child: LineChart(LineChartData(
+                      child: SizedBox(height: 35, child: LineChart(LineChartData(
                         gridData: const FlGridData(show: false),
                         titlesData: const FlTitlesData(show: false),
                         borderData: FlBorderData(show: false),
@@ -171,27 +171,23 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
               const Spacer(),
 
-              // 하단 컨트롤 패널 (레이아웃 수정됨)
+              // 하단 일렬 레이아웃 (칼로리 | 운동시간 | 목표설정)
               Container(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+                padding: const EdgeInsets.fromLTRB(15, 20, 15, 30),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.9)])
+                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.95)])
                 ),
                 child: Column(children: [
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceAround, crossAxisAlignment: CrossAxisAlignment.end, children: [
-                    // 좌측: 칼로리 소모량
-                    _info("소모 칼로리", "${totalCalories.toStringAsFixed(1)} kcal", neonColor),
-                    
-                    // 우측: 시간(위) + 목표설정(아래)
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _infoSmall("운동 시간", "${(elapsedSeconds ~/ 60).toString().padLeft(2, '0')}:${(elapsedSeconds % 60).toString().padLeft(2, '0')}"),
-                        const SizedBox(height: 10),
-                        _targetLayout(),
-                      ],
-                    ),
-                  ]),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _item("칼로리", "${totalCalories.toStringAsFixed(1)} kcal", neonColor),
+                      _divider(),
+                      _item("운동시간", "${(elapsedSeconds ~/ 60).toString().padLeft(2, '0')}:${(elapsedSeconds % 60).toString().padLeft(2, '0')}", Colors.white),
+                      _divider(),
+                      _targetItem(),
+                    ],
+                  ),
                   const SizedBox(height: 25),
                   Row(children: [
                     _btn(isRunning ? "정지" : "시작", isRunning ? Colors.grey : Colors.redAccent, () {
@@ -220,7 +216,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                         await prefs.setString('workoutLogs', jsonEncode(workoutLogs));
                         setState(() { elapsedSeconds = 0; totalCalories = 0.0; heartRateSpots.clear(); isRunning = false; });
                         workoutTimer?.cancel();
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("기록 저장됨")));
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("운동 기록 저장됨")));
                       }
                     }),
                     const SizedBox(width: 8),
@@ -237,30 +233,23 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     );
   }
 
-  // 큰 텍스트 정보 (칼로리용)
-  Widget _info(String t, String v, Color c) => Column(children: [
-    Text(t, style: const TextStyle(fontSize: 10, color: Colors.white70)), 
-    Text(v, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: c))
-  ]);
+  Widget _item(String label, String value, Color color) => Expanded(child: Column(children: [
+    Text(label, style: const TextStyle(fontSize: 9, color: Colors.white54)),
+    const SizedBox(height: 4),
+    Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color), textAlign: TextAlign.center),
+  ]));
 
-  // 작은 텍스트 정보 (시간용)
-  Widget _infoSmall(String t, String v) => Column(children: [
-    Text(t, style: const TextStyle(fontSize: 9, color: Colors.white54)), 
-    Text(v, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white))
-  ]);
-  
-  // 목표 설정 레이아웃 (더 작고 밸런스 있게)
-  Widget _targetLayout() => Column(children: [
-    const Text("목표 설정", style: TextStyle(fontSize: 9, color: Colors.white54)),
+  Widget _targetItem() => Expanded(child: Column(children: [
+    const Text("목표설정", style: TextStyle(fontSize: 9, color: Colors.white54)),
     const SizedBox(height: 2),
-    Row(mainAxisSize: MainAxisSize.min, children: [
-      IconButton(constraints: const BoxConstraints(), padding: EdgeInsets.zero, onPressed: () => setState(() => targetMinutes--), icon: const Icon(Icons.remove_circle_outline, size: 18, color: Colors.white70)),
-      const SizedBox(width: 8),
-      Text("$targetMinutes분", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-      const SizedBox(width: 8),
-      IconButton(constraints: const BoxConstraints(), padding: EdgeInsets.zero, onPressed: () => setState(() => targetMinutes++), icon: const Icon(Icons.add_circle_outline, size: 18, color: Colors.white70)),
+    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+      GestureDetector(onTap: () => setState(() => targetMinutes--), child: const Icon(Icons.remove, size: 14)),
+      Padding(padding: const EdgeInsets.symmetric(horizontal: 5), child: Text("$targetMinutes분", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold))),
+      GestureDetector(onTap: () => setState(() => targetMinutes++), child: const Icon(Icons.add, size: 14)),
     ])
-  ]);
+  ]));
+
+  Widget _divider() => Container(width: 1, height: 20, color: Colors.white10);
 
   Widget _btn(String t, Color c, VoidCallback f) => Expanded(child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: c, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), onPressed: f, child: Text(t, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white))));
 }
