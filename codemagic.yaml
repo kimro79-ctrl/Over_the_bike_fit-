@@ -4,19 +4,21 @@ workflows:
     environment:
       flutter: stable
     scripts:
-      - name: Initialize Project
+      - name: Initialize Project and Inject Permissions
         script: |
           flutter clean
+          # 프로젝트 파일들 재생성 및 권한 설정 준비
           flutter create --platforms android .
           flutter pub get
-      - name: Generate Assets
+      - name: Generate Icon and Splash
         script: |
-          # 아이콘 및 스플래시 생성
-          flutter pub run flutter_launcher_icons
+          # 아이콘 생성 (강제 모드)
+          flutter pub run flutter_launcher_icons:main
+          # 스플래시 생성
           flutter pub run flutter_native_splash:create
       - name: Build APK
         script: |
-          # 빌드 번호를 500으로 높여서 강제 업데이트 인식
-          flutter build apk --release --build-name=1.0.5 --build-number=500
+          # 빌드 번호를 대폭 높여서 이전 버전 완전 대체
+          flutter build apk --release --build-name=1.0.8 --build-number=800
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
