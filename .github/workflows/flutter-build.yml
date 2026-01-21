@@ -28,7 +28,6 @@ jobs:
 
       - name: Build APK
         run: |
-          # 아이콘 생성을 시도하되 실패해도 빌드를 계속함
           flutter pub run flutter_launcher_icons:main || true
           flutter build apk --debug
 
