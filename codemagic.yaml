@@ -3,18 +3,17 @@ workflows:
     name: OverTheBikeFit Build
     environment:
       flutter: stable
-      groups:
-        - google_play_credentials
     scripts:
-      - name: Reconstruct Project Structure
+      - name: Reconstruct Project and Inject Permissions
         script: |
-          # 안드로이드 폴더가 없을 경우 자동으로 생성합니다
+          # 안드로이드 구조가 없으면 자동으로 생성
           flutter create --platforms android .
           
-          # 권한 파일을 강제로 주입합니다 (워치 연결 해결)
+          # 블루투스 권한 파일을 강제로 주입 (워치 연동 해결)
+          mkdir -p android/app/src/main
           cat <<EOF > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
               <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
               <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
               <application
@@ -45,7 +44,7 @@ workflows:
           flutter pub run flutter_native_splash:create
       - name: Build APK
         script: |
-          # 빌드 번호를 1200으로 올려서 캐시를 무시합니다
-          flutter build apk --release --build-name=1.2.0 --build-number=1200
+          # 빌드 번호를 1500으로 올려 구버전 캐시 무시
+          flutter build apk --release --build-name=1.5.0 --build-number=1500
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
