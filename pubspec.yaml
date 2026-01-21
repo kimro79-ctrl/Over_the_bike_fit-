@@ -1,6 +1,6 @@
 name: over_the_bike_fit
-description: Final stable build for Bike Fit App with Heart Rate tracking.
-version: 1.0.0+1
+description: Bike Fit App with Auto Icon and Splash
+version: 1.0.8+800
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -9,45 +9,38 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  # 최신 버전 블루투스 및 차트 라이브러리
   flutter_blue_plus: ^1.31.1
   fl_chart: ^0.66.0
-  # 권한 및 데이터 저장
   permission_handler: ^12.0.1
   shared_preferences: ^2.3.2
-  # 스플래시 화면 (Android 12 대응)
   flutter_native_splash: ^2.4.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  # 아이콘 생성기
   flutter_launcher_icons: "^0.13.1"
 
 flutter:
   uses-material-design: true
-
-  # 에셋 경로 설정 (이 경로에 파일이 반드시 있어야 합니다)
   assets:
     - assets/background.png
     - assets/splash/splash_screen.png
     - assets/icon/app_icon.png
 
-# 1. 앱 아이콘 설정
+# 아이콘 설정 (강력 적용)
 flutter_launcher_icons:
-  android: "launcher_icon"
+  android: true
   ios: true
   image_path: "assets/icon/app_icon.png"
+  min_sdk_android: 21
   adaptive_icon_background: "#000000"
   adaptive_icon_foreground: "assets/icon/app_icon.png"
 
-# 2. 스플래시 화면 설정 (Android 12 블랙스크린/생략 방지 핵심)
+# 스플래시 설정
 flutter_native_splash:
   color: "#000000"
   image: assets/splash/splash_screen.png
-  # 안드로이드 12 이상에서 스플래시가 안 뜨는 현상 방지
   android_12:
     image: assets/splash/splash_screen.png
     color: "#000000"
   fullscreen: true
-  android_gravity: fill
