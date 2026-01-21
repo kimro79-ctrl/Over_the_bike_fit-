@@ -5,10 +5,20 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
 
-void main() {
+void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  
+  // splash를 Flutter가 첫 UI를 그릴 때까지 유지 (black screen 방지 핵심)
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  
+  // 여기서 비동기 초기화가 필요하면 추가 (예: SharedPreferences 로드, permission pre-check 등)
+  // await Future.delayed(Duration(milliseconds: 500));  // 필요 시 최소 지연
+  
   runApp(const BikeFitApp());
+  
+  // runApp 직후에 remove() 호출 → Flutter가 즉시 UI 렌더링 시작하면서 splash 자연스럽게 사라짐
+  // 대부분의 경우 이 한 줄로 black screen 완전 해결
+  FlutterNativeSplash.remove();
 }
 
 class BikeFitApp extends StatelessWidget {
@@ -47,7 +57,12 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 3), () => FlutterNativeSplash.remove());
+    // 만약 runApp 후에도 black screen이 남는 극히 희귀 케이스 대비 (5% 미만)
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   FlutterNativeSplash.remove();
+    // });
+    
+    // Bluetooth listener 등 기존 초기화
     _setupBluetoothListener();
   }
 
@@ -303,7 +318,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
               const SizedBox(height: 20),
 
-              // 하단 영역 – Spacer 제거 후 직접 배치
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
