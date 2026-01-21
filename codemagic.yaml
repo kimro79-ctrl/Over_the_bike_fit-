@@ -13,7 +13,7 @@ workflows:
         script: flutter pub get
       - name: Build APK
         script: |
-          # 빌드 번호를 150으로 대폭 상승 (아이콘/스플래시 캐시 방지)
-          flutter build apk --release --build-name=1.2.0 --build-number=150
+          # 빌드 번호를 200으로 설정하여 폰이 강제로 업데이트된 것으로 인식하게 함
+          flutter build apk --release --build-name=1.5.0 --build-number=200
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
