@@ -1,35 +1,23 @@
 name: Flutter APK Build
-
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: 'stable'
-
       - name: Get dependencies
         run: flutter pub get
-
-      - name: Generate Assets (Icon & Splash)
-        run: |
-          flutter pub run flutter_launcher_icons:main
-          flutter pub run flutter_native_splash:create
-
+      - name: Generate Icon
+        run: flutter pub run flutter_launcher_icons:main
       - name: Build APK
-        run: flutter build apk --debug --build-name=10.0.0 --build-number=10000
-
-      - name: Upload artifact
+        run: flutter build apk --debug
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
