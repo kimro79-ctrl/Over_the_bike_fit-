@@ -1,6 +1,6 @@
 name: over_the_bike_fit
-description: Bike Fit App with Auto Icon and Splash
-version: 1.0.8+800
+description: Bike Fit App
+version: 1.1.0+1000
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -8,7 +8,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.2
   flutter_blue_plus: ^1.31.1
   fl_chart: ^0.66.0
   permission_handler: ^12.0.1
@@ -16,8 +15,6 @@ dependencies:
   flutter_native_splash: ^2.4.1
 
 dev_dependencies:
-  flutter_test:
-    sdk: flutter
   flutter_launcher_icons: "^0.13.1"
 
 flutter:
@@ -27,20 +24,16 @@ flutter:
     - assets/splash/splash_screen.png
     - assets/icon/app_icon.png
 
-# 아이콘 설정 (강력 적용)
 flutter_launcher_icons:
-  android: true
+  android: "launcher_icon" # 이름을 명시하여 기존 아이콘을 강제로 덮어씁니다
   ios: true
   image_path: "assets/icon/app_icon.png"
-  min_sdk_android: 21
   adaptive_icon_background: "#000000"
   adaptive_icon_foreground: "assets/icon/app_icon.png"
 
-# 스플래시 설정
 flutter_native_splash:
   color: "#000000"
   image: assets/splash/splash_screen.png
   android_12:
     image: assets/splash/splash_screen.png
     color: "#000000"
-  fullscreen: true
