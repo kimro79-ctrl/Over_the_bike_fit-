@@ -12,7 +12,6 @@ void main() async {
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   runApp(const BikeFitApp());
 
-  // 스플래시 화면 2.5초 유지
   await Future.delayed(const Duration(milliseconds: 2500));
   FlutterNativeSplash.remove();
 }
@@ -44,7 +43,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   List<FlSpot> heartRateSpots = [];
   List<Map<String, dynamic>> workoutLogs = [];
   
-  // 칼로리 관련 변수
+  // 칼로리 변수 추가
   double totalCalories = 0.0;
 
   BluetoothDevice? connectedDevice;
@@ -68,9 +67,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
   // 심박수 기반 실시간 칼로리 계산 공식 (간이식)
   double _calculateCalories(int currentBpm) {
-    if (currentBpm <= 40) return 0.0;
-    // 일반적인 성인 기준 초당 소모 칼로리 추정치
-    return (currentBpm * 0.002); 
+    if (currentBpm <= 45) return 0.0;
+    // 일반적인 성인 기준 초당 소모 칼로리 추정치 (BPM에 비례)
+    return (currentBpm * 0.0022); 
   }
 
   void _startScan() async {
@@ -112,6 +111,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           for (var c in s.characteristics) {
             if (c.uuid == Guid("2a37")) {
               await c.setNotifyValue(true);
+              hrSubscription?.cancel();
               hrSubscription = c.lastValueStream.listen((value) {
                 if (value.isNotEmpty && mounted) {
                   setState(() {
@@ -154,7 +154,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 ),
               ),
 
-              // 콤팩트하게 줄인 심박수 및 그래프 영역
+              // 콤팩트하게 줄인 심박수 영역
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
                 padding: const EdgeInsets.all(12),
@@ -167,7 +167,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                     ]),
                     const SizedBox(width: 20),
                     Expanded(
-                      child: SizedBox(height: 45, child: LineChart(LineChartData(
+                      child: SizedBox(height: 40, child: LineChart(LineChartData( // 그래프 높이 대폭 축소
                         gridData: const FlGridData(show: false),
                         titlesData: const FlTitlesData(show: false),
                         borderData: FlBorderData(show: false),
@@ -183,7 +183,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
               const Spacer(),
 
-              // 운동 정보 및 컨트롤러
+              // 컨트롤 패널
               Container(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
                 decoration: BoxDecoration(
@@ -192,7 +192,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 child: Column(children: [
                   Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
                     _info("시간", "${(elapsedSeconds ~/ 60).toString().padLeft(2, '0')}:${(elapsedSeconds % 60).toString().padLeft(2, '0')}", Colors.white),
-                    _info("소모 칼로리", "${totalCalories.toStringAsFixed(1)} kcal", neonColor),
+                    _info("소모 칼로리", "${totalCalories.toStringAsFixed(1)} kcal", neonColor), // 칼로리 표시
                     _target(),
                   ]),
                   const SizedBox(height: 25),
@@ -204,7 +204,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                           workoutTimer = Timer.periodic(const Duration(seconds: 1), (t) {
                             setState(() {
                               elapsedSeconds++;
-                              if (bpm > 40) totalCalories += _calculateCalories(bpm);
+                              if (bpm > 45) totalCalories += _calculateCalories(bpm); // 운동 중 칼로리 누적
                             });
                           });
                         } else {
@@ -219,13 +219,13 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                           "date": "${DateTime.now().month}/${DateTime.now().day}",
                           "time": "${elapsedSeconds ~/ 60}분 ${elapsedSeconds % 60}초",
                           "avgBpm": "$bpm",
-                          "kcal": totalCalories.toStringAsFixed(1)
+                          "kcal": totalCalories.toStringAsFixed(1) // 칼로리 함께 저장
                         });
                         final prefs = await SharedPreferences.getInstance();
                         await prefs.setString('workoutLogs', jsonEncode(workoutLogs));
                         setState(() { elapsedSeconds = 0; totalCalories = 0.0; heartRateSpots.clear(); isRunning = false; });
                         workoutTimer?.cancel();
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("운동 기록이 저장되었습니다.")));
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("기록이 저장되었습니다.")));
                       }
                     }),
                     const SizedBox(width: 8),
@@ -271,7 +271,6 @@ class HistoryPage extends StatelessWidget {
           leading: const Icon(Icons.directions_bike, color: Color(0xFF00E5FF)),
           title: Text("${logs[i]['date']} 운동 - ${logs[i]['kcal']} kcal 소모"),
           subtitle: Text("시간: ${logs[i]['time']} | 평균 심박: ${logs[i]['avgBpm']} BPM"),
-          trailing: const Icon(Icons.chevron_right, color: Colors.white24),
         ),
       ),
     );
