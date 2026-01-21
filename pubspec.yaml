@@ -1,6 +1,6 @@
 name: over_the_bike_fit
 description: Final Stable Version.
-version: 1.0.1+5
+version: 1.0.1+6
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -26,8 +26,6 @@ flutter:
     - assets/icon/app_icon.png
 
 flutter_launcher_icons:
-  android: "launcher_icon"
-  ios: false # iOS 폴더 에러 방지를 위해 false 설정
+  android: true # 이름을 지정하지 않고 true로 설정하여 기본 경로 탐색
+  ios: false
   image_path: "assets/icon/app_icon.png"
-  adaptive_icon_background: "#000000"
-  adaptive_icon_foreground: "assets/icon/app_icon.png"
