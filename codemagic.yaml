@@ -1,28 +1,30 @@
+# Codemagic 빌드 구성 파일
 workflows:
-  bike-fit-build:
-    name: Bike Fit Final Build
-    max_build_duration: 60
+  android-workflow:
+    name: Android Build Workflow
     instance_type: mac_mini_m1
+    max_build_duration: 60
     environment:
       flutter: stable
+      xcode: latest
+      groups:
+        - keystore_credentials # 키스토어 설정이 없다면 이 부분은 생략 가능합니다.
     scripts:
-      - name: Initialize Project
+      - name: Set up local.properties
         script: |
-          flutter create . --platforms android
-          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
-          sed -i '' '/<application/i \
-          <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" /> \
-          <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" /> \
-          <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" /> \
-          <uses-feature android:name="android.hardware.bluetooth_le" android:required="true"/>' $MANIFEST_PATH
-      - name: Get dependencies
+          echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
+      - name: Get Flutter packages
         script: |
           flutter pub get
-      - name: Generate Splash Screen
+      - name: Generate App Icons # 이 부분이 아이콘을 강제로 바꿔주는 핵심입니다!
         script: |
-          flutter pub run flutter_native_splash:create
-      - name: Build APK
+          flutter pub run flutter_launcher_icons
+      - name: Flutter build APK
         script: |
-          flutter build apk --release
+          flutter build apk --release --build-name=1.0.1 --build-number=2
     artifacts:
-      - build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/flutter-apk/app-release.apk
+    publishing:
+      email:
+        recipients:
+          - YOUR_EMAIL@example.com # 본인 이메일로 수정하세요.
