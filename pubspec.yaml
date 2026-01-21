@@ -1,5 +1,5 @@
 name: over_the_bike_fit
-description: Bike Fit App Final
+description: Final Icon and Layout Fix
 version: 1.0.0+1
 environment:
   sdk: '>=3.0.0 <4.0.0'
