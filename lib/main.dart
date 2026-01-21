@@ -9,9 +9,11 @@ import 'dart:convert';
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  // 스플래시 화면을 유지합니다.
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   runApp(const BikeFitApp());
-
+  
+  // 앱 구동 후 2.5초 뒤에 스플래시 화면을 제거합니다.
   await Future.delayed(const Duration(milliseconds: 2500));
   FlutterNativeSplash.remove();
 }
@@ -62,27 +64,18 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     }
   }
 
-  // 블루투스 권한 및 스캔 로직
+  // 워치 스캔 로직 (에러 수정 및 최적화)
   void _startScan() async {
-    // 1. 권한 요청 (이 과정이 있어야 시스템 설정에 권한이 뜹니다)
-    Map<Permission, PermissionStatus> statuses = await [
-      Permission.bluetoothScan,
-      Permission.bluetoothConnect,
-      Permission.location,
-    ].request();
-
-    if (statuses[Permission.bluetoothConnect]!.isDenied) {
-      setState(() => watchStatus = "권한을 허용해주세요");
-      openAppSettings(); // 권한이 거부된 경우 설정창으로 유도
-      return;
-    }
+    // 권한 요청
+    await [Permission.bluetoothScan, Permission.bluetoothConnect, Permission.location].request();
 
     setState(() => watchStatus = "워치 탐색 중...");
     
     try {
+      // Screenshot_20260121_183722_Chrome.jpg의 에러 원인이었던 매개변수 수정
       await FlutterBluePlus.startScan(timeout: const Duration(seconds: 15));
     } catch (e) {
-      setState(() => watchStatus = "블루투스 확인 필요");
+      setState(() => watchStatus = "블루투스를 켜주세요");
       return;
     }
 
@@ -90,19 +83,21 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     scanSubscription = FlutterBluePlus.scanResults.listen((results) {
       for (ScanResult r in results) {
         String name = r.device.platformName.toLowerCase();
+        // Amazfit 또는 심박수 서비스(180d)를 가진 기기 탐색
         if (name.contains("watch") || name.contains("fit") || name.contains("amazfit") || 
             r.advertisementData.serviceUuids.contains(Guid("180d"))) {
+          
           FlutterBluePlus.stopScan();
-          _connectToDevice(r.device);
+          _establishConnection(r.device);
           break;
         }
       }
     });
   }
 
-  void _connectToDevice(BluetoothDevice device) async {
+  void _establishConnection(BluetoothDevice device) async {
     try {
-      await device.connect(autoConnect: false);
+      await device.connect();
       setState(() {
         connectedDevice = device;
         watchStatus = "연결됨: ${device.platformName}";
@@ -110,10 +105,11 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
       List<BluetoothService> services = await device.discoverServices();
       for (var s in services) {
-        if (s.uuid == Guid("180d")) {
+        if (s.uuid == Guid("180d")) { // 심박 서비스
           for (var c in s.characteristics) {
-            if (c.uuid == Guid("2a37")) {
+            if (c.uuid == Guid("2a37")) { // 심박 측정값
               await c.setNotifyValue(true);
+              hrSubscription?.cancel();
               hrSubscription = c.lastValueStream.listen((value) {
                 if (value.isNotEmpty && mounted) {
                   setState(() {
@@ -151,14 +147,17 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 child: Container(
                   margin: const EdgeInsets.symmetric(vertical: 10),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(border: Border.all(color: neonColor), borderRadius: BorderRadius.circular(20)),
-                  child: Text(watchStatus, style: const TextStyle(fontSize: 13, color: neonColor)),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: connectedDevice != null ? neonColor : Colors.white54),
+                    borderRadius: BorderRadius.circular(20)
+                  ),
+                  child: Text(watchStatus, style: TextStyle(fontSize: 13, color: connectedDevice != null ? neonColor : Colors.white70)),
                 ),
               ),
 
-              // 심박수 박스
+              // 심박수 차트
               Container(
-                margin: const EdgeInsets.all(20),
+                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(color: Colors.black.withOpacity(0.5), borderRadius: BorderRadius.circular(15)),
                 child: Row(
@@ -185,7 +184,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
               const Spacer(),
 
-              // 하단 컨트롤러
+              // 컨트롤 패널
               Container(
                 padding: const EdgeInsets.fromLTRB(20, 40, 20, 40),
                 decoration: BoxDecoration(
@@ -218,7 +217,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                         });
                         final prefs = await SharedPreferences.getInstance();
                         await prefs.setString('workoutLogs', jsonEncode(workoutLogs));
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("기록 완료")));
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("기록이 저장되었습니다.")));
                       }
                     }),
                     const SizedBox(width: 10),
