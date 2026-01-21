@@ -1,6 +1,6 @@
 name: over_the_bike_fit
-description: Final Stable Version for Mobile Users.
-version: 1.0.1+10
+description: Final stable build with auto Bluetooth connection and persistent data
+version: 1.0.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -8,11 +8,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  cupertino_icons: ^1.0.2
   flutter_native_splash: ^2.4.1
   flutter_blue_plus: ^1.31.1
   fl_chart: ^0.66.0
   permission_handler: ^12.0.1
-  shared_preferences: ^2.2.2
+  shared_preferences: ^2.3.2
 
 dev_dependencies:
   flutter_test:
@@ -23,11 +24,21 @@ flutter:
   uses-material-design: true
   assets:
     - assets/background.png
+    - assets/splash/splash_screen.png
     - assets/icon/app_icon.png
 
 flutter_launcher_icons:
   android: "launcher_icon"
-  ios: false # 모바일 작업 시 iOS 폴더가 없어 에러가 나므로 반드시 false
+  ios: true
   image_path: "assets/icon/app_icon.png"
   adaptive_icon_background: "#000000"
   adaptive_icon_foreground: "assets/icon/app_icon.png"
+
+flutter_native_splash:
+  color: "#000000"
+  image: assets/splash/splash_screen.png
+  android_12:
+    image: assets/splash/splash_screen.png
+    color: "#000000"
+  fullscreen: true
+  android_gravity: fill
