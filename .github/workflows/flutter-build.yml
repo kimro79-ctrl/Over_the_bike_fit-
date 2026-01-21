@@ -18,7 +18,6 @@ jobs:
       - name: Build Start
         run: |
           flutter pub get
-          flutter pub run flutter_launcher_icons:main || true
           flutter build apk --debug
       - name: Save APK
         uses: actions/upload-artifact@v4
