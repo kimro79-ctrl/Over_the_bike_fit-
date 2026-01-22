@@ -42,7 +42,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   List<FlSpot> heartRateSpots = [];
   Timer? workoutTimer;
 
-  // 하단 아이템 위젯 (칼로리, 시간 등)
+  // 하단 정보 위젯
   Widget _infoItem(String label, String value, Color color) {
     return Expanded(
       child: Column(
@@ -56,7 +56,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     );
   }
 
-  // 목표 설정 위젯 (더하기/빼기 포함)
+  // 목표 설정 위젯
   Widget _targetSelector() {
     return Expanded(
       child: Column(
@@ -67,17 +67,35 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              GestureDetector(onTap: () => setState(() => targetMinutes--), child: const Icon(Icons.remove, size: 16)),
+              GestureDetector(onTap: () => setState(() => targetMinutes = (targetMinutes > 1) ? targetMinutes - 1 : 1),
+                  child: const Icon(Icons.remove, size: 16)),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Text("$targetMinutes분", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
               ),
-              GestureDetector(onTap: () => setState(() => targetMinutes++), child: const Icon(Icons.add, size: 16)),
+              GestureDetector(onTap: () => setState(() => targetMinutes++),
+                  child: const Icon(Icons.add, size: 16)),
             ],
           )
         ],
       ),
     );
+  }
+
+  void _toggleWorkout() {
+    setState(() {
+      isRunning = !isRunning;
+      if (isRunning) {
+        workoutTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+          setState(() {
+            elapsedSeconds++;
+            totalCalories = elapsedSeconds * 0.14; // 단순 칼로리 계산 예시
+          });
+        });
+      } else {
+        workoutTimer?.cancel();
+      }
+    });
   }
 
   @override
@@ -94,11 +112,11 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           child: Column(
             children: [
               const SizedBox(height: 15),
-              const Text("OVER THE BIKE FIT", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, fontStyle: FontStyle.italic)),
-              
+              const Text("OVER THE BIKE FIT",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, fontStyle: FontStyle.italic)),
+
               const Spacer(),
 
-              // 하단 컨트롤 영역
               Container(
                 padding: const EdgeInsets.fromLTRB(20, 30, 20, 40),
                 decoration: BoxDecoration(
@@ -110,20 +128,17 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 ),
                 child: Column(
                   children: [
-                    // [일렬 배치 섹션] 칼로리 | 시간 | 목표
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         _infoItem("칼로리", "${totalCalories.toStringAsFixed(1)} kcal", neonColor),
-                        Container(width: 1, height: 20, color: Colors.white24), // 구분선
+                        Container(width: 1, height: 20, color: Colors.white24),
                         _infoItem("운동시간", timeStr, Colors.white),
-                        Container(width: 1, height: 20, color: Colors.white24), // 구분선
+                        Container(width: 1, height: 20, color: Colors.white24),
                         _targetSelector(),
                       ],
                     ),
                     const SizedBox(height: 30),
-                    // 버튼 영역
                     Row(
                       children: [
                         Expanded(
@@ -133,17 +148,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 15),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
-                            onPressed: () {
-                              setState(() {
-                                isRunning = !isRunning;
-                                if (isRunning) {
-                                  workoutTimer = Timer.periodic(const Duration(seconds: 1), (t) => setState(() => elapsedSeconds++));
-                                } else {
-                                  workoutTimer?.cancel();
-                                }
-                              });
-                            },
-                            child: Text(isRunning ? "정지" : "시작", style: const TextStyle(fontWeight: FontWeight.bold)),
+                            onPressed: _toggleWorkout,
+                            child: Text(isRunning ? "정지" : "시작",
+                                style: const TextStyle(fontWeight: FontWeight.bold)),
                           ),
                         ),
                         const SizedBox(width: 10),
