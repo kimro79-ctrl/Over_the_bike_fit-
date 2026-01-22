@@ -1,7 +1,6 @@
 name: over_the_bike_fit
-description: "A professional cycling heart rate monitor app with real watch connection."
+description: "A professional cycling app"
 publish_to: 'none'
-
 version: 1.0.0+1
 
 environment:
@@ -10,41 +9,27 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # 실제 블루투스 워치 연동 핵심 패키지
   flutter_blue_plus: ^1.31.0
-  
-  # 블루투스 및 근처 기기 권한 요청
   permission_handler: ^11.3.1
-  
-  # 실시간 심박수 그래프
   fl_chart: ^0.66.0
-  
-  # 기본 아이콘 팩
   cupertino_icons: ^1.0.6
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-  
-  # 아이콘 자동 생성 도구
   flutter_launcher_icons: "^0.13.1"
-  
-  # 스플래시 화면 자동 생성 도구
   flutter_native_splash: "^2.3.10"
 
-# 앱 아이콘 설정 (assets/icon.png 파일이 있어야 합니다)
 flutter_launcher_icons:
   android: "ic_launcher"
   ios: true
   image_path: "assets/icon.png"
   min_sdk_android: 21
 
-# 스플래시 화면 설정 (assets/splash.png 파일이 있어야 합니다)
 flutter_native_splash:
-  color: "#000000" # 배경색 (검정)
-  image: "assets/splash.png" # 중앙 이미지
+  color: "#000000"
+  image: "assets/splash.png"
   android_12:
     image: "assets/splash.png"
     color: "#000000"
@@ -53,8 +38,6 @@ flutter_native_splash:
 
 flutter:
   uses-material-design: true
-
-  # 이미지 리소스 등록
   assets:
     - assets/background.png
     - assets/icon.png
