@@ -1,16 +1,18 @@
 name: Flutter APK Build
 
-on: [push, workflow_dispatch]
+on:
+  push:
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -22,28 +24,17 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Cache pub dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.pub-cache
-          key: \( {{ runner.os }}-pub- \){{ hashFiles('**/pubspec.lock') }}
-
-      - name: Clean and get packages
+      - name: Get dependencies
         run: |
-          flutter clean
           flutter pub get
 
-      - name: Build release APKs
-        run: flutter build apk --release --split-per-abi --no-tree-shake-icons --verbose
+      - name: Build APK
+        run: flutter build apk --release --split-per-abi --verbose
 
-      - name: Upload APKs
+      - name: Upload APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: bike-fit-apks
-          path: |
-            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
-            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-            build/app/outputs/flutter-apk/app-x86_64-release.apk
+          name: release-apk
+          path: build/app/outputs/flutter-apk/*.apk
           if-no-files-found: warn
-          retention-days: 14
