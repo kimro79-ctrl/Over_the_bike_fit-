@@ -1,51 +1,36 @@
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.over_the_bike_fit">  <!-- ★ 네 실제 패키지 이름으로 바꿔! build.gradle의 namespace 또는 applicationId 확인 (pubspec name 기반 보통 com.회사.앱이름) -->
-
-    <!-- 필수 권한: 블루투스 연결용 (Android 12+ 호환) -->
-    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
-        android:usesPermissionFlags="neverForLocation" />  <!-- 위치 없이 스캔 가능 -->
-    <!-- 필요시 인터넷 등 추가: <uses-permission android:name="android.permission.INTERNET"/> -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
-        android:label="Over the Bike Fit"  <!-- 앱 이름: strings.xml에 @string/app_name 있으면 "@string/app_name"으로 변경 추천 -->
-        android:name="${applicationName}"  <!-- v2 핵심: Application 클래스 자동 연결 -->
-        android:icon="@mipmap/ic_launcher"  <!-- 기존 아이콘 유지 -->
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:allowBackup="true"
-        android:supportsRtl="true"
-        android:theme="@style/LaunchTheme">  <!-- 스플래시 테마 유지 -->
-
-        <!-- v2 embedding 명시: 플러그인 체크 통과 필수 -->
-        <meta-data
-            android:name="flutterEmbedding"
-            android:value="2" />
-
+        android:label="Over The Bike Fit"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+        
         <activity
-            android:name=".MainActivity"  <!-- v2 표준: FlutterActivity 상속 클래스 -->
-            android:exported="true"  <!-- Android 12+ 필수 -->
+            android:name=".MainActivity"
+            android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustResize"
-            android:showWhenLocked="true">
-
-            <!-- 런처 인텐트: 앱 아이콘 클릭 시 시작 -->
+            android:windowSoftInputMode="adjustResize">
+            
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-
-            <!-- 딥링크나 커스텀 인텐트 있으면 여기에 추가 -->
-
         </activity>
-
-        <!-- 추가 컴포넌트 (서비스, 리시버 등) 있으면 기존 내용 그대로 붙여넣기 -->
-
+        
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
     </application>
-
 </manifest>
