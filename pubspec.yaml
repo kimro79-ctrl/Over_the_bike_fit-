@@ -1,5 +1,5 @@
 name: over_the_bike_fit
-description: "Professional cycling app"
+description: "Professional cycling app for Galaxy Watch"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # 권한 및 워치 통신 필수 패키지
   flutter_blue_plus: ^1.31.0
   permission_handler: ^11.3.1
   fl_chart: ^0.66.0
@@ -21,16 +22,19 @@ dev_dependencies:
   flutter_launcher_icons: "^0.13.1"
   flutter_native_splash: "^2.3.10"
 
-# [수정] 사용자님의 GitHub 실제 폴더 경로를 반영했습니다.
+# [수정] 안드로이드 최신 버전에서도 아이콘이 나오도록 어댑티브 설정 추가
 flutter_launcher_icons:
   android: "ic_launcher"
   ios: true
-  image_path: "assets/icon/app_icon.png" # 경로 수정됨
+  image_path: "assets/icon/app_icon.png"
+  # 아래 두 줄이 있어야 안드로이드 13 이상에서 아이콘이 기본 로고로 변하지 않습니다.
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
   min_sdk_android: 21
 
 flutter_native_splash:
   color: "#000000"
-  image: "assets/icon/app_icon.png" # 경로 수정됨
+  image: "assets/icon/app_icon.png"
   android_12:
     image: "assets/icon/app_icon.png"
     color: "#000000"
@@ -39,7 +43,6 @@ flutter_native_splash:
 
 flutter:
   uses-material-design: true
-  # [중요] GitHub에 올라가 있는 실제 경로와 이름을 토씨 하나 안 틀리게 적어야 합니다.
   assets:
     - assets/background.png
     - assets/icon/app_icon.png
