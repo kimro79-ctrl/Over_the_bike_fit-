@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'dart:ui';
 
 void main() => runApp(const BikeFitApp());
 
@@ -13,7 +12,7 @@ class BikeFitApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(brightness: Brightness.dark),
+      theme: ThemeData(brightness: Brightness.dark, scaffoldBackgroundColor: Colors.black),
       home: const WorkoutScreen(),
     );
   }
@@ -34,7 +33,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   BluetoothDevice? _connectedDevice;
   StreamSubscription? _hrSubscription;
 
+  // 워치 검색 및 연결
   Future<void> _handleWatchSearch() async {
+    print("검색 버튼 눌림");
     await [Permission.bluetoothScan, Permission.bluetoothConnect, Permission.location].request();
     _startScanning();
   }
@@ -55,7 +56,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   }
 
   Future<void> _connectToDevice(BluetoothDevice device) async {
-    setState(() => _watchStatus = "연결 시도...");
+    setState(() => _watchStatus = "연결 중...");
     try {
       await device.connect();
       _connectedDevice = device;
@@ -70,7 +71,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 if (value.isNotEmpty && mounted) {
                   setState(() {
                     _heartRate = value[1]; 
-                    if (_hrSpots.length > 40) _hrSpots.removeAt(0);
+                    if (_hrSpots.length > 30) _hrSpots.removeAt(0);
                     _hrSpots.add(FlSpot(_timerCount.toDouble(), _heartRate.toDouble()));
                     _timerCount++;
                     double sum = _hrSpots.map((e) => e.y).reduce((a, b) => a + b);
@@ -88,40 +89,40 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
       body: Stack(
         children: [
+          // 1. 배경 이미지
           Positioned.fill(child: Image.asset('assets/background.png', fit: BoxFit.cover)),
           
+          // 2. 실제 콘텐츠
           SafeArea(
             child: Column(
               children: [
                 const SizedBox(height: 20),
-                const Text('Over The Bike Fit', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 15),
+                const Text('Over The Bike Fit', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                const SizedBox(height: 10),
                 
-                // 1. 워치 연결 상태 버튼
-                GestureDetector(
-                  onTap: _handleWatchSearch,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.cyanAccent.withOpacity(0.4)),
+                // 워치 검색 (터치가 확실한 ElevatedButton 사용)
+                Center(
+                  child: ElevatedButton(
+                    onPressed: _handleWatchSearch,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black.withOpacity(0.8),
+                      side: const BorderSide(color: Colors.cyanAccent, width: 0.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     ),
                     child: Text(_watchStatus, style: const TextStyle(fontSize: 11, color: Colors.cyanAccent)),
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
 
-                // 2. 그래프 (워치연결 밑으로 배치, 크기 1/2 축소)
+                // 그래프 (크기 축소 및 위치 조정)
                 SizedBox(
-                  height: 70, // 높이를 기존의 절반 수준으로 축소
+                  height: 60,
                   width: double.infinity,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 50),
                     child: LineChart(
                       LineChartData(
                         gridData: FlGridData(show: false),
@@ -131,7 +132,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                           LineChartBarData(
                             spots: _hrSpots.isEmpty ? [const FlSpot(0, 0)] : _hrSpots,
                             isCurved: true,
-                            color: Colors.cyanAccent.withOpacity(0.6),
+                            color: Colors.cyanAccent,
                             barWidth: 2,
                             dotData: FlDotData(show: false),
                           ),
@@ -143,8 +144,15 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
                 const Spacer(),
 
-                // 3. 데이터 배너 (더 어둡게 수정)
-                _buildDarkPanel(
+                // 데이터 배너 (요청대로 더 어둡게)
+                Container(
+                  width: MediaQuery.of(context).size.width * 0.9,
+                  padding: const EdgeInsets.symmetric(vertical: 25),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.9), // 매우 어둡게
+                    borderRadius: BorderRadius.circular(25),
+                    border: Border.all(color: Colors.white10),
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
@@ -158,17 +166,17 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
                 const SizedBox(height: 40),
 
-                // 4. 하단 버튼 (더 어둡게 + 터치 인식 수정)
+                // 하단 버튼부 (동작 문제를 위해 최상단 노출 및 InkWell 적용)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 60),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _actionButton(Icons.play_arrow, "시작", () => print("시작 눌림")),
+                      _actionButton(Icons.play_arrow, "시작", () => print("START 버튼 작동")),
                       const SizedBox(width: 30),
-                      _actionButton(Icons.save, "저장", () => print("저장 눌림")),
+                      _actionButton(Icons.save, "저장", () => print("SAVE 버튼 작동")),
                       const SizedBox(width: 30),
-                      _actionButton(Icons.bar_chart, "기록", () => print("기록 눌림")),
+                      _actionButton(Icons.bar_chart, "기록", () => print("LOG 버튼 작동")),
                     ],
                   ),
                 )
@@ -184,28 +192,14 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     children: [
       Text(l, style: TextStyle(fontSize: 10, color: c, fontWeight: FontWeight.bold)),
       const SizedBox(height: 8),
-      Text(v, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+      Text(v, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
     ],
   );
 
-  // 배너를 더 어둡게 만드는 위젯
-  Widget _buildDarkPanel({required Widget child}) {
-    return Container(
-      width: MediaQuery.of(context).size.width * 0.9,
-      padding: const EdgeInsets.all(25),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7), // 투명도를 낮추고 블랙을 강화 (더 어두움)
-        borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
-      ),
-      child: child,
-    );
-  }
-
-  // 버튼을 더 어둡게 만들고 터치 영역을 확보하는 위젯
   Widget _actionButton(IconData i, String l, VoidCallback t) => Column(
     children: [
-      Material( // InkWell 사용을 위해 Material 추가 (터치 피드백 강화)
+      // InkWell과 Material 조합으로 터치 영역 및 피드백 보장
+      Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: t,
@@ -213,16 +207,16 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           child: Container(
             width: 65, height: 65,
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.6), // 버튼도 더 어둡게
+              color: Colors.black.withOpacity(0.85), // 매우 어둡게
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: Colors.white12),
             ),
-            child: Center(child: Icon(i, size: 28, color: Colors.white.withOpacity(0.8))),
+            child: Icon(i, size: 28, color: Colors.white),
           ),
         ),
       ),
       const SizedBox(height: 10),
-      Text(l, style: const TextStyle(fontSize: 11, color: Colors.white30)),
+      Text(l, style: const TextStyle(fontSize: 11, color: Colors.white38)),
     ],
   );
 }
