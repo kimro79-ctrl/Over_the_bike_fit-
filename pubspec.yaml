@@ -9,11 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  # 블루투스 기기(샤오미, 갤럭시 등) 검색용
   flutter_blue_plus: ^1.31.0
-  # 권한 요청용
   permission_handler: ^11.3.1
-  fl_chart: ^0.66.0
+  fl_chart: ^0.66.0 # 그래프를 그리기 위한 필수 패키지
   cupertino_icons: ^1.0.6
 
 dev_dependencies:
@@ -27,9 +25,9 @@ flutter_launcher_icons:
   android: "ic_launcher"
   ios: true
   image_path: "assets/icon/app_icon.png"
-  # 안드로이드 최신 버전 아이콘 해결사
   adaptive_icon_background: "#000000"
   adaptive_icon_foreground: "assets/icon/app_icon.png"
+  adaptive_icon_round: "assets/icon/app_icon.png" # 원형 아이콘 강제 적용
   min_sdk_android: 21
 
 flutter_native_splash:
