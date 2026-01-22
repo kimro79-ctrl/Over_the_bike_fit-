@@ -1,5 +1,5 @@
 name: over_the_bike_fit
-description: "Professional cycling app with Galaxy Watch sync."
+description: "A professional cycling app"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -21,7 +21,6 @@ dev_dependencies:
   flutter_launcher_icons: "^0.13.1"
   flutter_native_splash: "^2.3.10"
 
-# [핵심 교정] 이 항목들은 반드시 왼쪽 끝에서 시작해야 합니다.
 flutter_launcher_icons:
   android: "ic_launcher"
   ios: true
