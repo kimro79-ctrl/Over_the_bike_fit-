@@ -1,10 +1,11 @@
 name: over_the_bike_fit
-description: Perfect Success Build
+description: Final Build Fix
 version: 1.0.0+1
 publish_to: 'none'
 
 environment:
-  sdk: '>=3.3.0 <4.0.0'
+  # 현재 서버 환경인 3.27.1과 완벽히 호환되도록 설정
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -12,7 +13,6 @@ dependencies:
   flutter_blue_plus: ^1.31.1
   fl_chart: ^0.66.0
   permission_handler: ^11.3.1
-  shared_preferences: ^2.3.2
 
 dev_dependencies:
   flutter_test:
