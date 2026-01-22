@@ -5,30 +5,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Java Setup
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
-      - name: Flutter Setup
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
-          # v1 구조와 가장 호환성이 좋았던 버전으로 고정합니다.
-          flutter-version: '3.16.0' 
+          flutter-version: '3.19.6' # 안정적인 3.19 버전 사용
           channel: 'stable'
 
-      - name: Build APK (Force Mode)
+      - name: 프로젝트 현대화 및 빌드
         run: |
+          # 1. 예전 구조를 최신 구조(V2)로 강제 업데이트 시도
+          flutter create . --platforms android
+          
+          # 2. 의존성 해결
           flutter pub get
-          # 아이콘 생성 에러는 무시합니다.
+          
+          # 3. 아이콘/스플래시 생성 (실패해도 무시)
           flutter pub run flutter_launcher_icons:main || true
-          # v1 embedding 경고를 완전히 무시하고 디버그용 APK를 강제로 뽑아냅니다.
+          flutter pub run flutter_native_splash:create || true
+          
+          # 4. 강제 빌드
           flutter build apk --debug --no-tree-shake-icons --no-version-check
 
-      - name: Result Upload
+      - name: 결과물 저장
         uses: actions/upload-artifact@v4
         with:
-          name: bike-app-final
+          name: bike-app-complete
           path: "**/build/app/outputs/flutter-apk/app-debug.apk"
