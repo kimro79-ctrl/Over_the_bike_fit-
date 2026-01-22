@@ -12,7 +12,6 @@ dependencies:
   fl_chart: ^0.66.0
   permission_handler: ^11.0.0
   shared_preferences: ^2.2.0
-  # 충돌을 일으켰던 스플래시 버전을 안정적인 버전으로 고정합니다.
   flutter_native_splash: 2.3.11 
 
 dev_dependencies:
