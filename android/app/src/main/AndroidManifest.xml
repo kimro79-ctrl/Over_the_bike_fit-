@@ -1,27 +1,43 @@
-<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.over_the_bike_fit">
+    package="com.example.over_the_bike_fit">  <!-- 네 앱 패키지 이름으로 바꿔! pubspec.yaml의 name이나 build.gradle의 applicationId 확인 -->
 
-    <uses-permission android:name="android.permission.BLUETOOTH" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+    <!-- 퍼미션들 (기존에 있던 거 그대로 유지하거나 필요시 추가) -->
+    <!-- 예: 인터넷 권한 필요하면 아래처럼 -->
+    <!-- <uses-permission android:name="android.permission.INTERNET"/> -->
+    <!-- <uses-permission android:name="android.permission.BLUETOOTH"/> -->  <!-- 네 앱이 블루투스 쓰면 추가 -->
 
     <application
-        android:label="Over The Bike Fit"
-        android:icon="@mipmap/ic_launcher">
+        android:label="Over the Bike Fit"  <!-- 앱 이름, strings.xml에 있으면 @string/app_name으로 -->
+        android:name="${applicationName}"   <!-- ★ 핵심: v1 → v2 변경 여기! -->
+        android:icon="@mipmap/ic_launcher">  <!-- 아이콘 경로 유지 -->
+
+        <!-- ★ 핵심: v2 embedding 선언 (activity 안에 넣는 게 표준) -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+
         <activity
-            android:name=".MainActivity"
+            android:name=".MainActivity"  <!-- 또는 io.flutter.embedding.android.FlutterActivity 전체 경로로 해도 OK, 하지만 .MainActivity가 표준 -->
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
+
+            <!-- 인텐트 필터 (런처 아이콘용, 기존 그대로) -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- 스플래시 화면 관련 meta-data (기존에 있으면 유지, 없으면 추가 안 해도 됨) -->
+            <!-- <meta-data android:name="io.flutter.embedding.android.SplashScreenDrawable" android:resource="@drawable/launch_background"/> -->
+
         </activity>
+
+        <!-- 추가 서비스/리시버/프로바이더 등 네 앱에 있던 거 그대로 복사해서 붙여넣기 -->
+
     </application>
+
 </manifest>
