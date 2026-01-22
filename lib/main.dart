@@ -198,14 +198,15 @@ class _WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProvider
                 const SizedBox(height: 40),
 
                 // [수정] 초미세 가느다란 그래프 (barWidth: 0.8)
+                // 아래 부분에서 const 키워드를 제거했습니다.
                 SizedBox(
                   height: 60,
                   width: MediaQuery.of(context).size.width * 0.8,
                   child: LineChart(LineChartData(
                     minY: 40, maxY: 190,
-                    gridData: const FlGridData(show: false),
-                    titlesData: const FlTitlesData(show: false),
-                    borderData: const FlBorderData(show: false),
+                    gridData: FlGridData(show: false),     // const 제거
+                    titlesData: FlTitlesData(show: false), // const 제거
+                    borderData: FlBorderData(show: false), // const 제거 (여기가 오류 원인이었습니다)
                     lineBarsData: [
                       LineChartBarData(
                         spots: _hrSpots.isEmpty ? [const FlSpot(0, 70)] : _hrSpots,
