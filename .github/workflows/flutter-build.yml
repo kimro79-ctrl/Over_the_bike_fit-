@@ -15,21 +15,22 @@ jobs:
         uses: subosito/flutter-action@v2
         with: { flutter-version: '3.27.1', channel: 'stable' }
 
-      - name: 안드로이드 현대화 및 권한 주입
+      - name: 안드로이드 권한 및 리소스 빌드
         run: |
-          # 1. 기존 안드로이드 프로젝트 구조 삭제 후 최신 버전으로 재생성 (v1 임베딩 방지)
-          rm -rf android
-          flutter create . --platforms android --org com.example
+          # 안드로이드 프로젝트 구조 생성
+          if [ ! -d "android" ]; then
+            flutter create . --platforms android --org com.example
+          fi
           
-          # 2. 블루투스 권한 다시 주입
+          # AndroidManifest.xml에 필수 권한 주입
           sed -i '/<application/i \    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' android/app/src/main/AndroidManifest.xml
           
-          # 3. 아이콘 및 스플래시 생성 (설정 파일 기반)
           flutter pub get
+          # 아이콘 및 스플래시 생성
           flutter pub run flutter_launcher_icons:main || true
           flutter pub run flutter_native_splash:create || true
           
-          # 4. APK 빌드
+          # APK 빌드
           flutter build apk --debug --no-tree-shake-icons
 
       - name: APK 추출
