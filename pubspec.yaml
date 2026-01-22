@@ -18,7 +18,7 @@ dev_dependencies:
     sdk: flutter
   flutter_launcher_icons: "^0.13.1"
 
-# 👈 이 아래 섹션들이 있어야 빌드 에러가 나지 않습니다.
+# 설정 섹션 (반드시 좌측 끝에 붙여야 함)
 flutter_launcher_icons:
   android: true
   ios: true
