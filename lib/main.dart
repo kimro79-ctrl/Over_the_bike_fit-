@@ -7,7 +7,6 @@ import 'package:permission_handler/permission_handler.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Future.delayed(const Duration(seconds: 2));
   runApp(const BikeFitApp());
 }
 
@@ -39,17 +38,30 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   Timer? _workoutTimer;
   Timer? _watchTimer;
   bool _isWorkingOut = false;
+  String _watchModel = ""; 
   bool _isWatchConnected = false; 
-  List<FlSpot> _hrSpots = [];
+  List<FlSpot> _hrSpots = [const FlSpot(0, 0)]; 
   double _timerCounter = 0;
-  List<Map<String, dynamic>> _workoutHistory = [];
 
   void _vibrate() => HapticFeedback.lightImpact();
 
   Future<void> _handleWatchConnection() async {
     _vibrate();
     if (await Permission.bluetoothConnect.request().isGranted) {
-      setState(() { _isWatchConnected = true; _heartRate = 72; });
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.cyanAccent)),
+      );
+
+      await Future.delayed(const Duration(seconds: 2)); 
+      Navigator.pop(context);
+
+      setState(() {
+        _isWatchConnected = true;
+        _watchModel = "Galaxy Watch 6"; 
+        _heartRate = 72;
+      });
       _startHeartRateMonitoring();
     }
   }
@@ -60,18 +72,17 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       if (!mounted || !_isWatchConnected) return;
       setState(() {
         if (_isWorkingOut) {
-          _heartRate = 110 + Random().nextInt(60); 
-          // 평균 심박수 계산 로직
+          _heartRate = 110 + Random().nextInt(50); 
           _totalHRSum += _heartRate;
           _hrCount++;
           _avgHeartRate = _totalHRSum ~/ _hrCount;
 
           _timerCounter += 0.5;
           _hrSpots.add(FlSpot(_timerCounter, _heartRate.toDouble()));
-          if (_hrSpots.length > 50) _hrSpots.removeAt(0);
-          _calories += 0.08;
-        } else { 
-          _heartRate = 65 + Random().nextInt(10); 
+          if (_hrSpots.length > 40) _hrSpots.removeAt(0);
+          _calories += 0.07;
+        } else {
+          _heartRate = 60 + Random().nextInt(10); 
         }
       });
     });
@@ -82,12 +93,12 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     setState(() {
       _isWorkingOut = !_isWorkingOut;
       if (_isWorkingOut) {
-        _totalHRSum = 0; _hrCount = 0; // 시작 시 평균 데이터 초기화
+        _totalHRSum = 0; _hrCount = 0;
         _workoutTimer = Timer.periodic(const Duration(seconds: 1), (t) {
           setState(() => _duration += const Duration(seconds: 1));
         });
-      } else { 
-        _workoutTimer?.cancel(); 
+      } else {
+        _workoutTimer?.cancel();
       }
     });
   }
@@ -98,75 +109,110 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 배경 이미지
+          // 배경 이미지 (assets 폴더에 background.png가 있어야 함)
           Positioned.fill(
             child: Opacity(
-              opacity: 0.3, 
-              child: Image.asset('assets/background.png', fit: BoxFit.cover, 
-                errorBuilder: (_,__,___)=>Container(color: Colors.black))
-            )
+              opacity: 0.4,
+              child: Image.asset('assets/background.png', fit: BoxFit.cover,
+                errorBuilder: (_,__,___) => Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.redAccent, Colors.black],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    )
+                  )
+                )),
+            ),
           ),
           
           SafeArea(
             child: Column(
               children: [
-                const SizedBox(height: 15),
-                const Text('Over The Bike Fit', 
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white70, letterSpacing: 1.2)),
+                const SizedBox(height: 10),
+                const Text('Over The Bike Fit', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white70)),
                 
                 const SizedBox(height: 15),
 
-                // 워치 연결 버튼
+                // 워치 연결 상태 영역
                 Center(
                   child: InkWell(
                     onTap: _isWatchConnected ? null : _handleWatchConnection,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         color: Colors.black54, 
                         borderRadius: BorderRadius.circular(20), 
-                        border: Border.all(color: Colors.cyanAccent.withOpacity(0.4))
+                        border: Border.all(color: _isWatchConnected ? Colors.cyanAccent : Colors.white24)
                       ),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.watch, size: 14, color: _isWatchConnected ? Colors.cyanAccent : Colors.white),
+                        Icon(Icons.watch, size: 14, color: _isWatchConnected ? Colors.cyanAccent : Colors.white38),
                         const SizedBox(width: 8),
-                        Text(_isWatchConnected ? "연결됨" : "워치 대기 중 ❤️", style: const TextStyle(fontSize: 11)),
+                        Text(_isWatchConnected ? "연결됨: $_watchModel" : "워치 연결하기", style: const TextStyle(fontSize: 11)),
                       ]),
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 45), // 상단 여백 (배너 위치 조절)
+                const SizedBox(height: 30),
 
-                // [데이터 배너] - AVG 포함 및 정중앙 정렬
+                // [그래프 영역]
+                Container(
+                  height: 160,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: LineChart(
+                    LineChartData(
+                      minY: 40, maxY: 180,
+                      gridData: FlGridData(show: true, drawVerticalLine: false, getDrawingHorizontalLine: (v) => FlLine(color: Colors.white10, strokeWidth: 1)),
+                      titlesData: const FlTitlesData(show: false),
+                      borderData: FlBorderData(show: false),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: _hrSpots,
+                          isCurved: true, barWidth: 3.5, color: Colors.redAccent,
+                          dotData: const FlDotData(show: false),
+                          belowBarData: BarAreaData(show: true, color: Colors.redAccent.withOpacity(0.15)),
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+
+                const Spacer(),
+
+                // [데이터 배너] 하단 배치 + 그라데이션 + 가시성 강화
                 Center(
                   child: Container(
-                    width: MediaQuery.of(context).size.width * 0.82,
-                    padding: const EdgeInsets.symmetric(vertical: 28),
+                    width: MediaQuery.of(context).size.width * 0.9,
+                    padding: const EdgeInsets.symmetric(vertical: 25),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.75),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withOpacity(0.12), // 상단 광원 효과
+                          Colors.black.withOpacity(0.65), // 하단 짙은 배경
+                        ],
+                      ),
                       borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: Colors.redAccent.withOpacity(0.3), width: 1.5),
+                      border: Border.all(color: Colors.white.withOpacity(0.15), width: 1),
                       boxShadow: [
-                        BoxShadow(color: Colors.redAccent.withOpacity(0.1), blurRadius: 20, spreadRadius: 1)
+                        BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 20, spreadRadius: 2)
                       ]
                     ),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // 1행: 실시간 심박 & 평균 심박 (AVG)
                         Row(
                           children: [
-                            Expanded(child: _miniTile(Icons.favorite, "실시간 심박", _isWatchConnected ? "$_heartRate" : "--", Colors.cyanAccent)),
-                            Expanded(child: _miniTile(Icons.trending_up, "평균 심박", "$_avgHeartRate", Colors.redAccent)),
+                            Expanded(child: _boldTile(Icons.favorite, "실시간 심박", _isWatchConnected ? "$_heartRate" : "--", Colors.cyanAccent)),
+                            Expanded(child: _boldTile(Icons.trending_up, "평균 심박", "$_avgHeartRate", Colors.redAccent)),
                           ],
                         ),
-                        const SizedBox(height: 30), // 행간 간격
-                        // 2행: 칼로리 & 운동 시간
+                        const SizedBox(height: 30),
                         Row(
                           children: [
-                            Expanded(child: _miniTile(Icons.local_fire_department, "소모 칼로리", "${_calories.toStringAsFixed(1)}", Colors.orangeAccent)),
-                            Expanded(child: _miniTile(Icons.timer, "운동 시간", _formatDuration(_duration), Colors.blueAccent)),
+                            Expanded(child: _boldTile(Icons.local_fire_department, "소모 칼로리", "${_calories.toStringAsFixed(1)}", Colors.orangeAccent)),
+                            Expanded(child: _boldTile(Icons.timer, "운동 시간", _formatDuration(_duration), Colors.blueAccent)),
                           ],
                         ),
                       ],
@@ -174,39 +220,17 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                   ),
                 ),
 
-                const Spacer(), // 배너와 그래프 사이 공간 확보
-
-                // 하단 실시간 그래프
-                Container(
-                  height: 130,
-                  padding: const EdgeInsets.symmetric(horizontal: 25),
-                  child: LineChart(LineChartData(
-                    minY: 40, maxY: 190,
-                    gridData: FlGridData(show: false),
-                    titlesData: FlTitlesData(show: false),
-                    borderData: FlBorderData(show: false),
-                    lineBarsData: [
-                      LineChartBarData(
-                        spots: _hrSpots.isEmpty ? [const FlSpot(0, 70)] : _hrSpots,
-                        isCurved: true, barWidth: 3.5, color: Colors.redAccent, 
-                        dotData: FlDotData(show: false),
-                        belowBarData: BarAreaData(show: true, color: Colors.redAccent.withOpacity(0.1)),
-                      )
-                    ],
-                  )),
-                ),
-
                 const SizedBox(height: 35),
 
-                // 조작 버튼 영역
+                // 하단 조작 버튼
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 35),
+                  padding: const EdgeInsets.only(bottom: 30),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _actionBtn("시작/정지", _isWorkingOut ? Icons.pause : Icons.play_arrow, _toggleWorkout),
-                      _actionBtn("기록 저장", Icons.save_alt, () {}), // 저장 기능 연결 가능
-                      _actionBtn("기록 보기", Icons.leaderboard, () {}), // 리포트 기능 연결 가능
+                      _actionBtn("기록 저장", Icons.save_alt, () {}),
+                      _actionBtn("기록 보기", Icons.leaderboard, () {}),
                     ],
                   ),
                 )
@@ -218,45 +242,53 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     );
   }
 
-  // 데이터 유닛 (AVG 포함 모든 텍스트 정중앙 정렬)
-  Widget _miniTile(IconData icon, String label, String value, Color color) => Column(
+  // [강조된 데이터 타일 위젯]
+  Widget _boldTile(IconData icon, String label, String value, Color color) => Column(
     mainAxisAlignment: MainAxisAlignment.center,
-    crossAxisAlignment: CrossAxisAlignment.center,
     children: [
       Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 12, color: color), 
-          const SizedBox(width: 5), 
-          Text(label, style: const TextStyle(fontSize: 10, color: Colors.white54, fontWeight: FontWeight.w500))
-        ]
+          Icon(icon, size: 13, color: color.withOpacity(0.9)), 
+          const SizedBox(width: 6),
+          Text(label, style: const TextStyle(fontSize: 10, color: Colors.white70, fontWeight: FontWeight.w600)),
+        ],
       ),
       const SizedBox(height: 7),
-      Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+      Text(
+        value, 
+        style: TextStyle(
+          fontSize: 26, 
+          fontWeight: FontWeight.w900, 
+          color: Colors.white,
+          letterSpacing: -0.5,
+          shadows: [
+            Shadow(color: Colors.black.withOpacity(0.6), blurRadius: 4, offset: const Offset(1, 1))
+          ]
+        )
+      ),
     ],
   );
 
-  // 하단 액션 버튼 디자인
   Widget _actionBtn(String label, IconData icon, VoidCallback onTap) => Column(
     children: [
       InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(15),
         child: Container(
-          width: 65, height: 50,
+          width: 70, height: 55,
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.08), 
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(15), 
             border: Border.all(color: Colors.white10)
           ),
-          child: Icon(icon, size: 22, color: Colors.white),
+          child: Icon(icon, size: 24, color: Colors.white),
         ),
       ),
       const SizedBox(height: 6),
-      Text(label, style: const TextStyle(fontSize: 10, color: Colors.white54)),
+      Text(label, style: const TextStyle(fontSize: 10, color: Colors.white60)),
     ],
   );
 
-  String _formatDuration(Duration d) => 
-      "${d.inMinutes.toString().padLeft(2, '0')}:${(d.inSeconds % 60).toString().padLeft(2, '0')}";
+  String _formatDuration(Duration d) => "${d.inMinutes.toString().padLeft(2, '0')}:${(d.inSeconds % 60).toString().padLeft(2, '0')}";
 }
