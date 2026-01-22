@@ -1,4 +1,4 @@
-name: Flutter APK
+name: Flutter APK Build
 
 on: [push, workflow_dispatch]
 
@@ -22,21 +22,30 @@ jobs:
           channel: stable
           cache: true
 
-      - name: 정리 & 패키지
+      - name: 패키지 캐시
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+          key: \( {{ runner.os }}-pub- \){{ hashFiles('**/pubspec.lock') }}
+
+      - name: 정리 & 패키지 받기
         run: |
-          echo "현재 Flutter 버전 확인"
-          flutter --version
-          flutter clean || true
-          flutter pub get || true
+          flutter clean
+          flutter pub get
 
-      - name: APK 빌드 시도
-        run: flutter build apk --release --split-per-abi --no-tree-shake-icons --verbose || true
-        continue-on-error: true  # 실패해도 다음 단계로 (로그 보기 위해)
+      - name: 릴리스 APK 빌드
+        run: flutter build apk --release --split-per-abi --no-tree-shake-icons --verbose
 
-      - name: 결과 APK 업로드
+      - name: APK 업로드
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: release-apks
-          path: build/app/outputs/flutter-apk/app-*-release.apk
-          retention-days: 7
+          name: over-the-bike-fit-release-apks
+          path: |
+            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            build/app/outputs/flutter-apk/app-x86_64-release.apk
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 6
