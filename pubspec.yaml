@@ -1,44 +1,43 @@
-name: over_the_bike_fit
-description: "A professional cycling app"
-publish_to: 'none'
-version: 1.0.0+1
+name: BikeFit Perfect Build
+on: [push, workflow_dispatch]
 
-environment:
-  sdk: '>=3.2.0 <4.0.0'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-dependencies:
-  flutter:
-    sdk: flutter
-  flutter_blue_plus: ^1.31.0
-  permission_handler: ^11.3.1
-  fl_chart: ^0.66.0
-  cupertino_icons: ^1.0.6
+      - name: Java Setup
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^3.0.0
-  flutter_launcher_icons: "^0.13.1"
-  flutter_native_splash: "^2.3.10"
+      - name: Flutter Setup
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.1'
+          channel: 'stable'
 
-flutter_launcher_icons:
-  android: "ic_launcher"
-  ios: true
-  image_path: "assets/icon.png"
-  min_sdk_android: 21
+      - name: 안드로이드 빌드 및 권한 설정
+        run: |
+          # 1. 안드로이드 초기화
+          rm -rf android
+          flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
+          
+          # 2. 블루투스 및 위치 권한 주입
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' android/app/src/main/AndroidManifest.xml
+          
+          # 3. 리소스 및 패키지 설치
+          flutter pub get
+          flutter pub run flutter_launcher_icons:main || true
+          flutter pub run flutter_native_splash:create || true
+          
+          # 4. APK 빌드
+          flutter build apk --debug --no-tree-shake-icons
 
-flutter_native_splash:
-  color: "#000000"
-  image: "assets/splash.png"
-  android_12:
-    image: "assets/splash.png"
-    color: "#000000"
-  android: true
-  ios: true
-
-flutter:
-  uses-material-design: true
-  assets:
-    - assets/background.png
-    - assets/icon.png
-    - assets/splash.png
+      - name: APK 파일 추출
+        uses: actions/upload-artifact@v4
+        with:
+          name: over-the-bike-final
+          path: build/app/outputs/flutter-apk/app-debug.apk
