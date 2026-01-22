@@ -24,14 +24,14 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Install dependencies
+      - name: Get dependencies
         run: |
           flutter pub get
 
       - name: Build release APK
         run: flutter build apk --release --split-per-abi --no-tree-shake-icons --verbose
 
-      - name: Upload artifacts
+      - name: Upload APKs
         if: success()
         uses: actions/upload-artifact@v4
         with:
