@@ -1,31 +1,37 @@
-name: Flutter APK Build
+name: Flutter APK
 on: [push, workflow_dispatch]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: 코드 다운
+        uses: actions/checkout@v4
+
+      - name: Java 17 셋업
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: 'stable'
 
-      - name: 준비 및 아이콘 생성
+      - name: Flutter 셋업
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: 패키지 설치 및 아이콘 생성
         run: |
           flutter pub get
-          # 아이콘과 스플래시를 실제로 생성하는 핵심 명령어
+          # 아이콘을 실제로 생성하는 핵심 명령어 추가
           flutter pub run flutter_launcher_icons:main || true
           flutter pub run flutter_native_splash:create || true
 
-      - name: APK 빌드
-        run: flutter build apk --debug # 경로 확인을 위해 debug로 빌드
+      - name: APK 빌드 (Debug 모드)
+        run: flutter build apk --debug --no-tree-shake-icons
 
-      - name: 결과물 업로드
+      - name: 결과 파일 업로드
         uses: actions/upload-artifact@v4
         with:
-          name: bike-fit-app
+          name: over-the-bike-app
+          # 가장 확실하게 파일이 생성되는 경로로 지정
           path: build/app/outputs/flutter-apk/app-debug.apk
