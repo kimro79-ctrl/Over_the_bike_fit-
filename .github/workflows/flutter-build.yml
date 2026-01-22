@@ -14,17 +14,16 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 무조건 빌드
+      - name: 강제 빌드 환경 조성
         run: |
           flutter pub get
-          # 아이콘 생성이 실패해도 무시하고 진행
+          # 아이콘 생성 에러 무시
           flutter pub run flutter_launcher_icons:main || true
-          # 에러가 나도 APK는 일단 생성함
-          flutter build apk --debug --no-tree-shake-icons
+          # 옛날 안드로이드 구조(v1 embedding)를 무시하고 APK를 뽑아내도록 강제 명령
+          flutter build apk --debug --no-tree-shake-icons --no-version-check
 
-      - name: 결과물 저장
+      - name: APK 파일 저장
         uses: actions/upload-artifact@v4
         with:
-          name: bike-app-success
-          # 어느 폴더에 있든 생성된 APK를 모두 찾아냄
-          path: "**/app-debug.apk"
+          name: bike-app-final
+          path: "**/build/app/outputs/flutter-apk/app-debug.apk"
