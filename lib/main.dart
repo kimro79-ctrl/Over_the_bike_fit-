@@ -34,7 +34,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   BluetoothDevice? _connectedDevice;
   StreamSubscription? _hrSubscription;
 
-  // 1. 워치 검색 및 권한 설정
   Future<void> _handleWatchSearch() async {
     await [Permission.bluetoothScan, Permission.bluetoothConnect, Permission.location].request();
     _startScanning();
@@ -55,31 +54,25 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     });
   }
 
-  // 2. 기기 연결 및 심박수 데이터 구독 (에러 수정 핵심)
   Future<void> _connectToDevice(BluetoothDevice device) async {
     setState(() => _watchStatus = "연결 시도...");
     try {
       await device.connect();
       _connectedDevice = device;
       setState(() => _watchStatus = "연결됨: ${device.platformName}");
-
       List<BluetoothService> services = await device.discoverServices();
       for (var s in services) {
-        if (s.uuid.toString().contains("180d")) { // 심박수 서비스
+        if (s.uuid.toString().contains("180d")) {
           for (var c in s.characteristics) {
-            if (c.uuid.toString().contains("2a37")) { // 심박수 측정 특성
-              
-              // [최종 에러 해결] 최신 버전은 setNotifyValue를 사용합니다.
+            if (c.uuid.toString().contains("2a37")) {
               await c.setNotifyValue(true); 
-              
               _hrSubscription = c.lastValueStream.listen((value) {
                 if (value.isNotEmpty && mounted) {
                   setState(() {
                     _heartRate = value[1]; 
-                    if (_hrSpots.length > 50) _hrSpots.removeAt(0);
+                    if (_hrSpots.length > 40) _hrSpots.removeAt(0);
                     _hrSpots.add(FlSpot(_timerCount.toDouble(), _heartRate.toDouble()));
                     _timerCount++;
-                    
                     double sum = _hrSpots.map((e) => e.y).reduce((a, b) => a + b);
                     _avgHeartRate = (sum / _hrSpots.length).round();
                   });
@@ -89,9 +82,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           }
         }
       }
-    } catch (e) {
-      setState(() => _watchStatus = "연결 실패");
-    }
+    } catch (e) { setState(() => _watchStatus = "연결 실패"); }
   }
 
   @override
@@ -100,7 +91,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 배경 이미지
           Positioned.fill(child: Image.asset('assets/background.png', fit: BoxFit.cover)),
           
           SafeArea(
@@ -108,16 +98,15 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
               children: [
                 const SizedBox(height: 20),
                 const Text('Over The Bike Fit', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                
                 const SizedBox(height: 15),
-                // 워치 검색 버튼
+                
+                // 1. 워치 연결 상태 버튼
                 GestureDetector(
                   onTap: _handleWatchSearch,
-                  behavior: HitTestBehavior.opaque,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.4),
+                      color: Colors.black.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: Colors.cyanAccent.withOpacity(0.4)),
                     ),
@@ -125,59 +114,61 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                   ),
                 ),
 
-                const Spacer(),
+                const SizedBox(height: 20),
 
-                // 실시간 그래프
+                // 2. 그래프 (워치연결 밑으로 배치, 크기 1/2 축소)
                 SizedBox(
-                  height: 130,
+                  height: 70, // 높이를 기존의 절반 수준으로 축소
                   width: double.infinity,
-                  child: LineChart(
-                    LineChartData(
-                      gridData: FlGridData(show: false),
-                      titlesData: FlTitlesData(show: false),
-                      borderData: FlBorderData(show: false),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: _hrSpots.isEmpty ? [const FlSpot(0, 0)] : _hrSpots,
-                          isCurved: true,
-                          color: Colors.cyanAccent.withOpacity(0.8),
-                          barWidth: 3,
-                          dotData: FlDotData(show: false),
-                          belowBarData: BarAreaData(show: true, color: Colors.cyanAccent.withOpacity(0.1)),
-                        ),
-                      ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: LineChart(
+                      LineChartData(
+                        gridData: FlGridData(show: false),
+                        titlesData: FlTitlesData(show: false),
+                        borderData: FlBorderData(show: false),
+                        lineBarsData: [
+                          LineChartBarData(
+                            spots: _hrSpots.isEmpty ? [const FlSpot(0, 0)] : _hrSpots,
+                            isCurved: true,
+                            color: Colors.cyanAccent.withOpacity(0.6),
+                            barWidth: 2,
+                            dotData: FlDotData(show: false),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const Spacer(),
 
-                // 투명 데이터 배너
-                _buildGlassPanel(
+                // 3. 데이터 배너 (더 어둡게 수정)
+                _buildDarkPanel(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildDataTile("실시간", "$_heartRate", Colors.cyanAccent),
-                      _buildDataTile("평균", "$_avgHeartRate", Colors.redAccent),
-                      _buildDataTile("칼로리", "0.0", Colors.orangeAccent),
-                      _buildDataTile("시간", "00:00", Colors.blueAccent),
+                      _dataTile("실시간", "$_heartRate", Colors.cyanAccent),
+                      _dataTile("평균", "$_avgHeartRate", Colors.redAccent),
+                      _dataTile("칼로리", "0.0", Colors.orangeAccent),
+                      _dataTile("시간", "00:00", Colors.blueAccent),
                     ],
                   ),
                 ),
 
                 const SizedBox(height: 40),
 
-                // 하단 조작 버튼 (먹통 방지 로직 적용)
+                // 4. 하단 버튼 (더 어둡게 + 터치 인식 수정)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 60),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildActionButton(Icons.play_arrow, "시작", () => print("시작")),
+                      _actionButton(Icons.play_arrow, "시작", () => print("시작 눌림")),
                       const SizedBox(width: 30),
-                      _buildActionButton(Icons.save, "저장", () => print("저장")),
+                      _actionButton(Icons.save, "저장", () => print("저장 눌림")),
                       const SizedBox(width: 30),
-                      _buildActionButton(Icons.bar_chart, "기록", () => print("기록")),
+                      _actionButton(Icons.bar_chart, "기록", () => print("기록 눌림")),
                     ],
                   ),
                 )
@@ -189,7 +180,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     );
   }
 
-  Widget _buildDataTile(String l, String v, Color c) => Column(
+  Widget _dataTile(String l, String v, Color c) => Column(
     children: [
       Text(l, style: TextStyle(fontSize: 10, color: c, fontWeight: FontWeight.bold)),
       const SizedBox(height: 8),
@@ -197,37 +188,37 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     ],
   );
 
-  Widget _buildGlassPanel({required Widget child}) {
+  // 배너를 더 어둡게 만드는 위젯
+  Widget _buildDarkPanel({required Widget child}) {
     return Container(
       width: MediaQuery.of(context).size.width * 0.9,
+      padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.01), // 초투명
+        color: Colors.black.withOpacity(0.7), // 투명도를 낮추고 블랙을 강화 (더 어두움)
         borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(25),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Padding(padding: const EdgeInsets.all(25), child: child),
-        ),
-      ),
+      child: child,
     );
   }
 
-  Widget _buildActionButton(IconData i, String l, VoidCallback t) => Column(
+  // 버튼을 더 어둡게 만들고 터치 영역을 확보하는 위젯
+  Widget _actionButton(IconData i, String l, VoidCallback t) => Column(
     children: [
-      GestureDetector(
-        onTap: t,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: 65, height: 65,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.02),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
+      Material( // InkWell 사용을 위해 Material 추가 (터치 피드백 강화)
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: t,
+          borderRadius: BorderRadius.circular(18),
+          child: Container(
+            width: 65, height: 65,
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.6), // 버튼도 더 어둡게
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
+            ),
+            child: Center(child: Icon(i, size: 28, color: Colors.white.withOpacity(0.8))),
           ),
-          child: Center(child: Icon(i, size: 28, color: Colors.white)),
         ),
       ),
       const SizedBox(height: 10),
