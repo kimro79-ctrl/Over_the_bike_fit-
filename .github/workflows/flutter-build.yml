@@ -11,15 +11,18 @@ jobs:
           java-version: '17'
       - uses: subosito/flutter-action@v2
         with:
-          # 최신 Dart SDK를 포함한 Flutter 버전으로 고정
-          flutter-version: '3.27.1'
+          flutter-version: '3.27.1' # 최신 버전 유지
           channel: 'stable'
-      - name: 의존성 설치 및 빌드
+
+      - name: 아이콘 생성 및 빌드
         run: |
           flutter pub get
+          # 아이콘 생성 시 오류가 나도 다음 단계로 넘어가게 설정
           flutter pub run flutter_launcher_icons:main || true
           flutter build apk --debug --no-tree-shake-icons
-      - uses: actions/upload-artifact@v4
+
+      - name: APK 업로드
+        uses: actions/upload-artifact@v4
         with:
-          name: bike-app
+          name: bike-app-final
           path: build/app/outputs/flutter-apk/app-debug.apk
