@@ -1,36 +1,16 @@
 name: over_the_bike_fit
-description: Final Build Stable
+description: Final Legacy Build
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  # 옛날 Flutter 버전과 호환되도록 낮춥니다.
+  sdk: '>=2.12.0 <3.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  flutter_blue_plus: ^1.31.1
-  fl_chart: ^0.66.0
-  permission_handler: ^11.0.0
-  shared_preferences: ^2.2.0
-  flutter_native_splash: 2.3.11 
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_launcher_icons: "^0.13.1"
-
-flutter:
-  uses-material-design: true
-  assets:
-    - assets/background.png
-    - assets/splash/splash_screen.png
-    - assets/icon/app_icon.png
-
-flutter_launcher_icons:
-  android: true
-  ios: false
-  image_path: "assets/icon/app_icon.png"
-
-flutter_native_splash:
-  color: "#000000"
-  image: "assets/splash/splash_screen.png"
+  # 최신 라이브러리들은 옛날 환경에서 에러를 낼 수 있으므로 버전을 고정하거나 뺍니다.
+  flutter_blue_plus: ^1.10.0
+  fl_chart: ^0.50.0
+  permission_handler: ^10.0.0
+  shared_preferences: ^2.0.0
