@@ -1,5 +1,5 @@
 name: over_the_bike_fit
-description: Bike Fit Perfect Version
+description: Bike Fit Perfect Final
 version: 1.0.0+1
 publish_to: 'none'
 
@@ -18,10 +18,10 @@ dev_dependencies:
     sdk: flutter
   flutter_launcher_icons: "^0.13.1"
 
-# 설정 섹션 (반드시 좌측 끝에 붙여야 함)
+# 👈 들여쓰기 주의: flutter_launcher_icons는 맨 왼쪽에 붙어야 합니다.
 flutter_launcher_icons:
   android: true
-  ios: true
+  ios: false
   image_path: "assets/icon/app_icon.png"
 
 flutter_native_splash:
