@@ -1,41 +1,38 @@
-name: BikeFit Perfect Build
-on: [push, workflow_dispatch]
+name: over_the_bike_fit
+description: "Indoor cycling fitness tracker for smart bikes"
+publish_to: "none"
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+environment:
+  sdk: ">=3.6.0 <4.0.0"
 
-      - name: Java Setup
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  fl_chart: ^0.65.0
+  permission_handler: ^11.0.1
+  flutter_blue_plus: ^1.31.15
 
-      - name: Flutter Setup
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.27.1'
-          channel: 'stable'
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.0
 
-      - name: Dependencies & Build Setup
-        run: |
-          # 1. 패키지 다운로드
-          flutter pub get
-          
-          # 2. 권한 추가 (android 폴더는 삭제하지 않음)
-          sed -i '/<application/i \    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' android/app/src/main/AndroidManifest.xml || true
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
 
-          # 3. 아이콘 및 스플래시 생성
-          flutter pub run flutter_launcher_icons:main
-          flutter pub run flutter_native_splash:create
-          
-          # 4. APK 빌드
-          flutter build apk --debug --no-tree-shake-icons
+flutter_native_splash:
+  color: "#000000"
+  image: assets/background.png
+  android: true
+  ios: true
+  fullscreen: true
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: over-the-bike-final
-          path: build/app/outputs/flutter-apk/app-debug.apk
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icon/app_icon.png
+    - assets/background.png
