@@ -6,10 +6,12 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart'; 
 import 'package:table_calendar/table_calendar.dart'; 
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('ko_KR', null); 
   runApp(const BikeFitApp());
 }
 
@@ -93,7 +95,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       return;
     }
     if (_isWorkingOut) {
-      _showSnack("운동을 먼저 정지(PAUSE)해 주세요.");
+      _showSnack("먼저 정지 버튼을 눌러주세요.");
       return;
     }
 
@@ -107,10 +109,13 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       'date': r.date, 'avgHR': r.avgHR, 'calories': r.calories, 'durationSeconds': r.duration.inSeconds
     }).toList()));
 
-    _showSnack("기록이 성공적으로 저장되었습니다!");
+    _showSnack("기록이 저장되었습니다!");
   }
 
-  void _showSnack(String m) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m), duration: const Duration(seconds: 1)));
+  void _showSnack(String m) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m), duration: const Duration(seconds: 1)));
+  }
 
   void _toggleWorkout() {
     setState(() {
@@ -162,48 +167,49 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           SafeArea(
             child: Column(
               children: [
-                const SizedBox(height: 15),
-                const Text('오버 더 바이크 핏', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.cyanAccent)),
-                const SizedBox(height: 8),
+                const SizedBox(height: 25),
+                // 💡 상단 타이틀: 흰색 영문으로 변경
+                const Text('OVER THE BIKE FIT', 
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.2)),
+                const SizedBox(height: 10),
                 _smallRoundedBtn(_isWatchConnected ? "워치 연결됨" : "워치 연결하기", _isWatchConnected ? Colors.cyanAccent : Colors.white, _connectWatch),
                 
-                // 그래프
                 Container(
-                  height: 40, width: double.infinity, margin: const EdgeInsets.symmetric(horizontal: 70, vertical: 10),
-                  child: _hrSpots.isEmpty ? const Center(child: Text("데이터 대기 중...", style: TextStyle(fontSize: 8, color: Colors.white24)))
+                  height: 45, width: double.infinity, margin: const EdgeInsets.symmetric(horizontal: 60, vertical: 15),
+                  child: _hrSpots.isEmpty ? const Center(child: Text("데이터 수신 대기 중...", style: TextStyle(fontSize: 9, color: Colors.white24)))
                     : LineChart(LineChartData(gridData: const FlGridData(show: false), titlesData: const FlTitlesData(show: false), borderData: FlBorderData(show: false),
                         lineBarsData: [LineChartBarData(spots: _hrSpots, isCurved: true, color: Colors.cyanAccent, barWidth: 2, dotData: const FlDotData(show: false))])),
                 ),
 
-                const Spacer(), // 배너를 하단 버튼 위로 밀어줌
+                const Spacer(),
                 
-                // 📊 데이터 배너 (버튼 바로 위 위치)
+                // 📊 데이터 배너 (하단 위치)
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+                  margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
                   padding: const EdgeInsets.symmetric(vertical: 22),
                   decoration: BoxDecoration(color: Colors.black.withOpacity(0.7), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white24, width: 1.2)),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _modestStat("심박", "$_heartRate", Colors.cyanAccent),
-                      _modestStat("평균", "$_avgHeartRate", Colors.redAccent),
+                      _modestStat("심박수", "$_heartRate", Colors.cyanAccent),
+                      _modestStat("평균심박", "$_avgHeartRate", Colors.redAccent),
                       _modestStat("칼로리", _calories.toStringAsFixed(1), Colors.orangeAccent),
-                      _modestStat("시간", "${_duration.inMinutes}:${(_duration.inSeconds % 60).toString().padLeft(2, '0')}", Colors.blueAccent),
+                      _modestStat("운동시간", "${_duration.inMinutes}:${(_duration.inSeconds % 60).toString().padLeft(2, '0')}", Colors.blueAccent),
                     ],
                   ),
                 ),
 
-                // 🔘 하단 버튼
+                // 🔘 하단 버튼 (한글 메뉴)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 35),
+                  padding: const EdgeInsets.only(bottom: 40),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _rectBtn(_isWorkingOut ? Icons.pause : Icons.play_arrow, "시작/정지", _toggleWorkout),
                       const SizedBox(width: 15),
-                      _rectBtn(Icons.refresh, "리셋", _resetWorkout),
+                      _rectBtn(Icons.refresh, "초기화", _resetWorkout),
                       const SizedBox(width: 15),
-                      _rectBtn(Icons.save, "저장", _saveRecord),
+                      _rectBtn(Icons.save, "기록저장", _saveRecord),
                       const SizedBox(width: 15),
                       _rectBtn(Icons.bar_chart, "기록보기", () {
                         Navigator.push(context, MaterialPageRoute(builder: (c) => HistoryScreen(records: _records)));
@@ -224,7 +230,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   Widget _rectBtn(IconData i, String l, VoidCallback t) => Column(children: [GestureDetector(onTap: t, behavior: HitTestBehavior.opaque, child: Container(width: 60, height: 60, decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.white24)), child: Icon(i, color: Colors.white, size: 24))), const SizedBox(height: 8), Text(l, style: const TextStyle(fontSize: 10, color: Colors.white))]);
 }
 
-// --- 📅 밝은 느낌의 히스토리 화면 (클래스 누락 방지됨) ---
 class HistoryScreen extends StatefulWidget {
   final List<WorkoutRecord> records;
   const HistoryScreen({Key? key, required this.records}) : super(key: key);
@@ -238,44 +243,48 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final filteredRecords = _selectedDay == null 
+        ? widget.records 
+        : widget.records.where((r) => r.date == DateFormat('yyyy-MM-dd').format(_selectedDay!)).toList();
+
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text("운동 기록", style: TextStyle(color: Colors.black)), backgroundColor: Colors.white, elevation: 0, iconTheme: const IconThemeData(color: Colors.black)),
+      appBar: AppBar(title: const Text("운동 히스토리", style: TextStyle(color: Colors.black)), backgroundColor: Colors.white, elevation: 0, iconTheme: const IconThemeData(color: Colors.black)),
       body: Column(
         children: [
-          Container(
-            margin: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(15)),
-            child: TableCalendar(
-              firstDay: DateTime.utc(2024, 1, 1),
-              lastDay: DateTime.utc(2030, 12, 31),
-              focusedDay: _focusedDay,
-              locale: 'ko_KR',
-              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-              onDaySelected: (sel, foc) => setState(() { _selectedDay = sel; _focusedDay = foc; }),
-              eventLoader: (day) => widget.records.where((r) => r.date == DateFormat('yyyy-MM-dd').format(day)).toList(),
-              calendarStyle: CalendarStyle(
-                defaultTextStyle: const TextStyle(color: Colors.black),
-                weekendTextStyle: const TextStyle(color: Colors.red),
-                markerDecoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle),
-                todayDecoration: BoxDecoration(color: Colors.blue[200], shape: BoxShape.circle),
-                selectedDecoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle),
-              ),
-              headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true, titleTextStyle: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+          TableCalendar(
+            firstDay: DateTime.utc(2024, 1, 1),
+            lastDay: DateTime.utc(2030, 12, 31),
+            focusedDay: _focusedDay,
+            locale: 'ko_KR', 
+            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+            onDaySelected: (sel, foc) => setState(() { _selectedDay = sel; _focusedDay = foc; }),
+            eventLoader: (day) => widget.records.where((r) => r.date == DateFormat('yyyy-MM-dd').format(day)).toList(),
+            calendarStyle: CalendarStyle(
+              defaultTextStyle: const TextStyle(color: Colors.black),
+              weekendTextStyle: const TextStyle(color: Colors.red),
+              markerDecoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle),
+              todayDecoration: BoxDecoration(color: Colors.blue[100], shape: BoxShape.circle),
+              selectedDecoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle),
             ),
+            headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true, titleTextStyle: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(_selectedDay == null ? "전체 기록" : "${DateFormat('M월 d일').format(_selectedDay!)}의 기록", style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.bold)),
           ),
           const Divider(height: 1),
           Expanded(
-            child: widget.records.isEmpty 
-            ? const Center(child: Text("저장된 기록이 없습니다.", style: TextStyle(color: Colors.grey)))
+            child: filteredRecords.isEmpty 
+            ? const Center(child: Text("저장된 데이터가 없습니다.", style: TextStyle(color: Colors.grey)))
             : ListView.builder(
-                itemCount: widget.records.length,
+                itemCount: filteredRecords.length,
                 itemBuilder: (c, i) {
-                  final r = widget.records[i];
+                  final r = filteredRecords[i];
                   return ListTile(
                     leading: const CircleAvatar(backgroundColor: Colors.blue, child: Icon(Icons.directions_bike, color: Colors.white, size: 20)),
-                    title: Text("${r.date} 운동", style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                    subtitle: Text("${r.duration.inMinutes}분 | 평균 ${r.avgHR}BPM", style: const TextStyle(color: Colors.black54)),
+                    title: Text("${r.date} 라이딩", style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                    subtitle: Text("${r.duration.inMinutes}분 소요 | 평균 ${r.avgHR}BPM", style: const TextStyle(color: Colors.black54)),
                     trailing: Text("${r.calories.toStringAsFixed(1)}kcal", style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
                   );
                 },
