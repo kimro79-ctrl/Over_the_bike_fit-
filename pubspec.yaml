@@ -16,8 +16,7 @@ dependencies:
   permission_handler: ^11.3.0
   fl_chart: ^0.66.0
   shared_preferences: ^2.2.2
-  intl: ^0.19.0
-  flutter_tts: ^4.0.2       # 음성 안내 패키지
+  intl: ^0.19.0       # 음성 안내 패키지
   table_calendar: ^3.1.0    # 달력 패키지
 
 dev_dependencies:
