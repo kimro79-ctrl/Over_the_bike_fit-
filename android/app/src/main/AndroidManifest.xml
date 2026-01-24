@@ -1,18 +1,27 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.overthebike.over_the_bike_fit">
 
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <!-- Bluetooth 권한: flutter_blue_plus ^1.31.1에 최적화 (Android 12+ 필수) -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+                     android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- 위치 권한: BLE 스캔 시 옵션으로 사용 (permission_handler로 런타임 처리) -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Legacy Bluetooth 권한: Android 11 이하 호환 -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
 
+    <!-- BLE 하드웨어 요구: flutter_blue_plus 기능 보장 -->
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
+
     <application
-        android:label="Indoor bike fit" 
+        android:label="Indoor Fit App"  <!-- pubspec.yaml name 반영 -->
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/ic_launcher"  <!-- flutter_launcher_icons 생성 아이콘 참조 -->
         android:allowBackup="false">
-        
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -21,7 +30,7 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
-            
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
