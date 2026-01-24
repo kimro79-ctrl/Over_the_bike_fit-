@@ -197,8 +197,14 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // ⭐ 뒷배경 밝기 조정 (0.5 -> 0.8)
-          Positioned.fill(child: Opacity(opacity: 0.8, child: Image.asset('assets/background.png', fit: BoxFit.cover, errorBuilder: (c,e,s)=>Container(color: Colors.black)))),
+          // ⭐ 배경 밝기 향상 (0.9)
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.9, 
+              child: Image.asset('assets/background.png', fit: BoxFit.cover, 
+                errorBuilder: (c,e,s)=>Container(color: Colors.black))
+            )
+          ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -312,25 +318,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ),
       body: Column(
         children: [
-          // ⭐ 통계 배너 크기 1/3 축소 (padding 및 font size 조정)
+          // ⭐ 통계 배너 축소 (컴팩트 디자인)
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF232526), Color(0xFF414345)],
+                colors: [Color(0xFF2C2C2C), Color(0xFF3D3D3D)], 
               ),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(15),
               border: Border.all(color: Colors.white10),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _summaryItem("7일 시간", "${weeklyStats['minutes']}분", Icons.timer_outlined, Colors.blueAccent),
-                Container(width: 1, height: 30, color: Colors.white12),
-                _summaryItem("7일 칼로리", "${weeklyStats['calories'].toStringAsFixed(0)} kcal", Icons.local_fire_department_rounded, Colors.orangeAccent),
+                _miniStat("7일 시간", "${weeklyStats['minutes']}분", Colors.blueAccent),
+                Container(width: 1, height: 25, color: Colors.white12),
+                _miniStat("7일 칼로리", "${weeklyStats['calories'].toStringAsFixed(0)} kcal", Colors.orangeAccent),
               ],
             ),
           ),
@@ -370,15 +374,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  // ⭐ 요약 아이템 텍스트 크기 축소
-  Widget _summaryItem(String label, String value, IconData icon, Color iconColor) {
+  Widget _miniStat(String label, String value, Color color) {
     return Column(
       children: [
-        Icon(icon, color: iconColor, size: 20),
-        const SizedBox(height: 5),
         Text(label, style: const TextStyle(color: Colors.white54, fontSize: 10)),
-        const SizedBox(height: 2),
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 3),
+        Text(value, style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.bold)),
       ],
     );
   }
