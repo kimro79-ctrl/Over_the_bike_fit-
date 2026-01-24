@@ -191,7 +191,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 배경 밝기 향상 (0.9)
+          // 배경 밝기 향상 (0.9 적용)
           Positioned.fill(child: Opacity(opacity: 0.9, child: Image.asset('assets/background.png', fit: BoxFit.cover, errorBuilder: (c,e,s)=>Container(color: Colors.black)))),
           SafeArea(
             child: Padding(
@@ -295,7 +295,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       appBar: AppBar(title: const Text("운동 히스토리", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), backgroundColor: Colors.black, elevation: 0, iconTheme: const IconThemeData(color: Colors.white)),
       body: Column(
         children: [
-          // 통계 배너 축소
+          // 통계 배너 축소 디자인
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
@@ -358,7 +358,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
       content: const Text("이 기록을 삭제하시겠습니까?", style: TextStyle(color: Colors.white70)),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text("취소", style: TextStyle(color: Colors.white38))),
-        TextButton(onPressed: () { setState(() { widget.records.removeWhere((rec) => rec.id == r.id); }); widget.onSync(); Navigator.pop(context); }, child: const Text("삭제", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold))),
+        TextButton(onPressed: () {
+          setState(() { widget.records.removeWhere((rec) => rec.id == r.id); });
+          widget.onSync(); Navigator.pop(context);
+        }, child: const Text("삭제", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold))),
       ],
     ));
   }
