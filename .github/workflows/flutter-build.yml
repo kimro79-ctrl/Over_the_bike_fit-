@@ -1,4 +1,4 @@
-name: BikeFit Absolute Build
+name: BikeFit Final Success Build
 on: [push, workflow_dispatch]
 
 jobs:
@@ -19,13 +19,13 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 안드로이드 v2 임베딩 강제 적용 및 빌드
+      - name: 안드로이드 환경 강제 설정 및 에러 수정
         run: |
-          # 1. 안드로이드 폴더 초기화
+          # 1. 안드로이드 폴더 초기화 (클린 상태 유지)
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           
-          # 2. V2 임베딩을 위한 MainActivity 강제 생성 (에러 방지 핵심)
+          # 2. V2 임베딩 MainActivity 생성
           mkdir -p android/app/src/main/java/com/overthebike/over_the_bike_fit/
           cat <<EOF > android/app/src/main/java/com/overthebike/over_the_bike_fit/MainActivity.java
           package com.overthebike.over_the_bike_fit;
@@ -34,20 +34,19 @@ jobs:
           }
           EOF
 
-          # 3. 블루투스 권한 자동 주입
-          sed -i '/<application/i \    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' android/app/src/main/AndroidManifest.xml
+          # 3. dexBuilder 에러 방지를 위한 Multidex 및 권한 설정
+          # build.gradle 파일의 defaultConfig 섹션에 multiDexEnabled true 추가
+          sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
           
-          # 4. 종속성 및 리소스 설치
-          flutter pub get
-          # 아이콘/스플래시 생성 (실패해도 빌드는 계속 진행)
-          flutter pub run flutter_launcher_icons:main || true
-          flutter pub run flutter_native_splash:create || true
+          # AndroidManifest.xml에 블루투스 권한 주입
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' android/app/src/main/AndroidManifest.xml
 
-          # 5. 빌드 (표준 모드로 실행)
+          # 4. 종속성 설치 및 빌드
+          flutter pub get
           flutter build apk --debug --no-tree-shake-icons
 
       - name: APK 파일 추출
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Fixed_V4
+          name: IndoorBikeFit_Final_Ready
           path: build/app/outputs/flutter-apk/app-debug.apk
