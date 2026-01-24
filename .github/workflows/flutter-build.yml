@@ -1,4 +1,4 @@
-name: BikeFit Final Success Build
+Name: BikeFit Final Success Build
 on: [push, workflow_dispatch]
 
 jobs:
@@ -19,13 +19,13 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 안드로이드 환경 설정 및 아이콘/권한 수정
+      - name: 안드로이드 환경 강제 설정 및 에러 수정
         run: |
-          # 1. 안드로이드 폴더 초기화 (성공했던 로직 유지)
+          # 1. 안드로이드 폴더 초기화 (클린 상태 유지)
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           
-          # 2. V2 임베딩 MainActivity 생성 (성공 로직)
+          # 2. V2 임베딩 MainActivity 생성
           mkdir -p android/app/src/main/java/com/overthebike/over_the_bike_fit/
           cat <<EOF > android/app/src/main/java/com/overthebike/over_the_bike_fit/MainActivity.java
           package com.overthebike.over_the_bike_fit;
@@ -34,19 +34,15 @@ jobs:
           }
           EOF
 
-          # 3. 에러 방지 설정 및 권한 주입
-          # Multidex 활성화 (dexBuilder 에러 방지)
+          # 3. dexBuilder 에러 방지를 위한 Multidex 및 권한 설정
+          # build.gradle 파일의 defaultConfig 섹션에 multiDexEnabled true 추가
           sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
           
-          # 블루투스 권한 (워치 연결 안 눌림 문제 해결을 위해 더 세밀하게 주입)
-          sed -i '/<application/i \    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />\n    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />' android/app/src/main/AndroidManifest.xml
+          # AndroidManifest.xml에 블루투스 권한 주입
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' android/app/src/main/AndroidManifest.xml
 
-          # 4. 종속성 설치 및 아이콘 생성 (추가됨)
+          # 4. 종속성 설치 및 빌드
           flutter pub get
-          # 아이콘 생성 패키지가 설정되어 있다면 실행 (실패해도 빌드는 계속됨)
-          flutter pub run flutter_launcher_icons:main || true
-
-          # 5. 최종 빌드
           flutter build apk --debug --no-tree-shake-icons
 
       - name: APK 파일 추출
@@ -54,3 +50,4 @@ jobs:
         with:
           name: IndoorBikeFit_Final_Ready
           path: build/app/outputs/flutter-apk/app-debug.apk
+어제 최종 성공한 코드야
