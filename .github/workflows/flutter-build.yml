@@ -1,5 +1,8 @@
 name: BikeFit Perfect Build
-on: [push, workflow_dispatch]
+on: 
+  push:
+    branches: [ main ] # 혹은 사용 중인 브랜치명
+  workflow_dispatch: # 수동 빌드 가능하게 설정
 
 jobs:
   build:
@@ -16,28 +19,28 @@ jobs:
       - name: Flutter Setup
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.1'
+          flutter-version: '3.27.1' # 사용 중인 버전
           channel: 'stable'
 
-      - name: 안드로이드 빌드 및 권한 설정
+      - name: 프로젝트 초기화 및 라이브러리 설치
         run: |
-          # 1. 안드로이드 초기화
-          rm -rf android
-          flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
-          
-          # 2. 블루투스 및 위치 권한 주입
-          sed -i '/<application/i \    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' android/app/src/main/AndroidManifest.xml
-          
-          # 3. 리소스 및 패키지 설치
+          # 기존의 'flutter create' 단계는 삭제했습니다.
+          # 이미 수정된 AndroidManifest.xml과 설정을 그대로 사용합니다.
           flutter pub get
+
+      - name: 리소스 생성 (아이콘 및 스플래시)
+        run: |
+          # 아이콘이나 스플래시 설정이 되어 있다면 실행, 없으면 무시
           flutter pub run flutter_launcher_icons:main || true
           flutter pub run flutter_native_splash:create || true
-          
-          # 4. APK 빌드
+
+      - name: APK 빌드 (Debug 모드)
+        run: |
+          # --project-name 옵션 없이 현재 폴더 설정대로 빌드합니다.
           flutter build apk --debug --no-tree-shake-icons
 
-      - name: APK 파일 추출
+      - name: 빌드된 APK 파일 업로드
         uses: actions/upload-artifact@v4
         with:
-          name: Indoor_bike_fit
+          name: Indoor_bike_fit_APK # 결과물 이름 변경
           path: build/app/outputs/flutter-apk/app-debug.apk
