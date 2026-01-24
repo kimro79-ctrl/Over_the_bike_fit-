@@ -19,15 +19,14 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 종속성 설치 및 환경 정리
+      - name: 종속성 설치
         run: |
           flutter pub get
-          # 불필요한 캐시 및 이전 빌드 기록 삭제
           flutter clean
 
-      - name: APK 빌드 (v2 embedding 강제 적용)
+      - name: APK 빌드 (Debug)
         run: |
-          # v1 embedding 관련 에러를 방지하고 표준 v2 방식으로 빌드합니다.
+          # 기존 프로젝트 설정을 존중하여 빌드 에러를 방지합니다.
           flutter build apk --debug --no-tree-shake-icons
 
       - name: APK 파일 추출
