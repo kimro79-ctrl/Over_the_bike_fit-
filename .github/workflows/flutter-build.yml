@@ -1,4 +1,4 @@
-name: BikeFit Final Stable Build
+name: BikeFit Final Stable Build V9
 on: [push, workflow_dispatch]
 
 jobs:
@@ -6,69 +6,59 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. 코드 체크아웃
       - uses: actions/checkout@v4
 
-      # 2. Java 환경 설정
       - name: Java Setup
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 3. Flutter 환경 설정
       - name: Flutter Setup
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      # 4. Android 빌드 설정 보정 및 Multidex 오류 수정
-      - name: Android Build Fix & Multidex Configuration
+      - name: Android Build Environment Fix
         run: |
-          echo "🧩 Android 환경 구성 시작"
+          echo "🧱 환경 정리 및 설정 시작"
 
-          # Flutter 캐시 정리
           flutter clean
           flutter pub get
 
-          # SDK 버전 강제 설정
+          # Gradle 파일 버전 맞춤
           sed -i 's/compileSdkVersion [0-9]\+/compileSdkVersion 34/' android/app/build.gradle
           sed -i 's/targetSdkVersion [0-9]\+/targetSdkVersion 34/' android/app/build.gradle
           sed -i 's/minSdkVersion [0-9]\+/minSdkVersion 21/' android/app/build.gradle
 
-          # Multidex 활성화
+          # build.gradle (프로젝트 루트)의 Gradle 플러그인 버전 최신화
+          sed -i 's/com.android.tools.build:gradle:[0-9\.]\+/com.android.tools.build:gradle:8.2.2/' android/build.gradle
+
+          # gradle-wrapper.properties 최신 버전 지정
+          sed -i 's/distributionUrl=.*/distributionUrl=https\\\:\/\/services.gradle.org\\/distributions\\/gradle-8.7-bin.zip/' android/gradle/wrapper/gradle-wrapper.properties
+
+          # Multidex 활성화 및 의존성 추가
           if ! grep -q "multiDexEnabled true" android/app/build.gradle; then
             sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
           fi
-
-          # Multidex 라이브러리 주입
           if ! grep -q 'androidx.multidex' android/app/build.gradle; then
             sed -i '/dependencies {/a \    implementation "androidx.multidex:multidex:2.0.1"' android/app/build.gradle
           fi
 
-          # Gradle 빌드 메모리 확장
+          # Gradle 메모리 여유 확보
           echo "org.gradle.jvmargs=-Xmx4g -XX:+HeapDumpOnOutOfMemoryError" >> android/gradle.properties
 
-          # Bluetooth 권한 자동 주입 (없을 시 추가)
-          MANIFEST="android/app/src/main/AndroidManifest.xml"
-          if ! grep -q "BLUETOOTH_CONNECT" $MANIFEST; then
-            sed -i '/<application/i \
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\
-    <uses-permission android:name="android.permission.BLUETOOTH" />\
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />' $MANIFEST
+          # Kotlin 버전 통일
+          if grep -q "kotlin-gradle-plugin" android/build.gradle; then
+            sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.25"/' android/build.gradle
           fi
 
-          echo "⚙️ 환경 설정 완료. 빌드 시작"
-
-          # 빌드 실행 (디버그 APK)
+          echo "🚀 빌드 시작"
           flutter build apk --debug --no-tree-shake-icons --no-shrink
 
-      # 5. 빌드 결과물 업로드
       - name: APK 파일 추출
         uses: actions/upload-artifact@v4
         with:
-          name: IndoorBikeFit_Fixed_V8
+          name: IndoorBikeFit_Fixed_V9
           path: build/app/outputs/flutter-apk/app-debug.apk
