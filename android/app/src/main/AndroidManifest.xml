@@ -1,64 +1,35 @@
-name: BikeFit Final Stable Build V9
-on: [push, workflow_dispatch]
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.overthebike.over_the_bike_fit">
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
 
-    steps:
-      - uses: actions/checkout@v4
+    <application
+        android:label="Indoor bike fit"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false">
+        
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
 
-      - name: Java Setup
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Flutter Setup
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.27.1'
-          channel: 'stable'
-
-      - name: Android Build Environment Fix
-        run: |
-          echo "🧱 환경 정리 및 설정 시작"
-
-          flutter clean
-          flutter pub get
-
-          # Gradle 파일 버전 맞춤
-          sed -i 's/compileSdkVersion [0-9]\+/compileSdkVersion 34/' android/app/build.gradle
-          sed -i 's/targetSdkVersion [0-9]\+/targetSdkVersion 34/' android/app/build.gradle
-          sed -i 's/minSdkVersion [0-9]\+/minSdkVersion 21/' android/app/build.gradle
-
-          # build.gradle (프로젝트 루트)의 Gradle 플러그인 버전 최신화
-          sed -i 's/com.android.tools.build:gradle:[0-9\.]\+/com.android.tools.build:gradle:8.2.2/' android/build.gradle
-
-          # gradle-wrapper.properties 최신 버전 지정
-          sed -i 's/distributionUrl=.*/distributionUrl=https\\\:\/\/services.gradle.org\\/distributions\\/gradle-8.7-bin.zip/' android/gradle/wrapper/gradle-wrapper.properties
-
-          # Multidex 활성화 및 의존성 추가
-          if ! grep -q "multiDexEnabled true" android/app/build.gradle; then
-            sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
-          fi
-          if ! grep -q 'androidx.multidex' android/app/build.gradle; then
-            sed -i '/dependencies {/a \    implementation "androidx.multidex:multidex:2.0.1"' android/app/build.gradle
-          fi
-
-          # Gradle 메모리 여유 확보
-          echo "org.gradle.jvmargs=-Xmx4g -XX:+HeapDumpOnOutOfMemoryError" >> android/gradle.properties
-
-          # Kotlin 버전 통일
-          if grep -q "kotlin-gradle-plugin" android/build.gradle; then
-            sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.25"/' android/build.gradle
-          fi
-
-          echo "🚀 빌드 시작"
-          flutter build apk --debug --no-tree-shake-icons --no-shrink
-
-      - name: APK 파일 추출
-        uses: actions/upload-artifact@v4
-        with:
-          name: IndoorBikeFit_Fixed_V9
-          path: build/app/outputs/flutter-apk/app-debug.apk
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+</manifest>
