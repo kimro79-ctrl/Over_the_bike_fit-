@@ -1,44 +1,71 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.overthebike.over_the_bike_fit">
+    package="com.example.indoor_fit_app">
 
-    <!-- Bluetooth 권한: flutter_blue_plus ^1.31.1에 최적화 (Android 12+ 필수) -->
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
-                     android:usesPermissionFlags="neverForLocation" />
+    <!-- 필수 권한 설정 -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-
-    <!-- 위치 권한: BLE 스캔 시 옵션으로 사용 (permission_handler로 런타임 처리) -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- Legacy Bluetooth 권한: Android 11 이하 호환 -->
-    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
-
-    <!-- BLE 하드웨어 요구: flutter_blue_plus 기능 보장 -->
-    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
-
     <application
-        android:label="Indoor Fit App"  <!-- pubspec.yaml name 반영 -->
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"  <!-- flutter_launcher_icons 생성 아이콘 참조 -->
-        android:allowBackup="false">
+        android:label="Indoor Fit"
+        android:icon="@mipmap/launcher_icon"
+        android:roundIcon="@mipmap/launcher_icon_round"
+        android:usesCleartextTraffic="true"
+        android:requestLegacyExternalStorage="true"
+        android:theme="@style/LaunchTheme">
 
+        <!-- 메인 액티비티 -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
-            android:theme="@android:style/Theme.Black.NoTitleBar"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
 
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity>
+
+        <!-- 스플래시 및 기본 테마 정의 -->
+        <meta-data
+            android:name="io.flutter.embedding.android.SplashScreenDrawable"
+            android:resource="@drawable/launch_background" />
 
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
     </application>
+
+    <!-- 테마 및 스플래시 설정 -->
+    <application>
+        <meta-data
+            android:name="android.app.lib_name"
+            android:value="flutter" />
+    </application>
+
+    <resources>
+        <!-- 스플래시 및 런처 테마 통합 -->
+        <style name="LaunchTheme" parent="Theme.Material3.DayNight.NoActionBar">
+            <item name="android:windowSplashScreenBackground">#000000</item>
+            <item name="android:windowSplashScreenAnimatedIcon">@mipmap/launcher_icon</item>
+            <item name="android:windowSplashScreenAnimationDuration">300</item>
+            <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+            <item name="postSplashScreenTheme">@style/NormalTheme</item>
+        </style>
+
+        <style name="NormalTheme" parent="Theme.Material3.DayNight.NoActionBar">
+            <item name="android:windowBackground">@android:color/white</item>
+        </style>
+    </resources>
+
 </manifest>
