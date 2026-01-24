@@ -5,7 +5,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
-        android:label="Over The Bike Fit"
+        android:label="indoor bike fit"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         
