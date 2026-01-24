@@ -1,11 +1,14 @@
-name: Mobile Simple Build
+name: Final Recovery Build
 on: [push, workflow_dispatch]
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+
+      - name: Java & Flutter Setup
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -13,12 +16,26 @@ jobs:
         with:
           flutter-version: '3.27.1'
           channel: 'stable'
-      - name: Build APK
+
+      - name: 깨진 안드로이드 환경 복구 및 빌드
         run: |
+          # 1. 기존 폴더가 깨졌을 수 있으므로 안전하게 재생성
+          rm -rf android
+          flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
+          
+          # 2. V2 임베딩용 MainActivity 강제 생성 (v1 에러 원천 차단)
+          mkdir -p android/app/src/main/java/com/overthebike/over_the_bike_fit/
+          echo 'package com.overthebike.over_the_bike_fit; import io.flutter.embedding.android.FlutterActivity; public class MainActivity extends FlutterActivity {}' > android/app/src/main/java/com/overthebike/over_the_bike_fit/MainActivity.java
+          
+          # 3. 64K 메서드 제한(dexBuilderDebug) 해결을 위한 설정 주입
+          sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
+          
+          # 4. 종속성 설치 및 빌드
           flutter pub get
           flutter build apk --debug --no-tree-shake-icons
-      - name: Upload
+
+      - name: APK 파일 추출
         uses: actions/upload-artifact@v4
         with:
-          name: Indoor_Bike_Fit_Test
+          name: IndoorFitApp_Success
           path: build/app/outputs/flutter-apk/app-debug.apk
