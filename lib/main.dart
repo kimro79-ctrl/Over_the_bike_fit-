@@ -56,7 +56,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   List<FlSpot> _hrSpots = [];
   double _timeCounter = 0;
   List<WorkoutRecord> _records = [];
-  
   List<ScanResult> _filteredResults = [];
   StreamSubscription? _scanSubscription;
 
@@ -161,7 +160,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       _showToast("기록하기에 운동 시간이 너무 짧습니다.");
       return;
     }
-
     String dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
     setState(() {
       _records.insert(0, WorkoutRecord(DateTime.now().toString(), dateStr, _avgHeartRate, _calories, _duration));
@@ -197,14 +195,8 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // ⭐ 배경 밝기 향상 (0.9)
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.9, 
-              child: Image.asset('assets/background.png', fit: BoxFit.cover, 
-                errorBuilder: (c,e,s)=>Container(color: Colors.black))
-            )
-          ),
+          // ⭐ 메인 배경 밝게 조정 (Opacity 0.9)
+          Positioned.fill(child: Opacity(opacity: 0.9, child: Image.asset('assets/background.png', fit: BoxFit.cover, errorBuilder: (c,e,s)=>Container(color: Colors.black)))),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -262,10 +254,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       const SizedBox(width: 15),
       _actionBtn(Icons.refresh, "리셋", () { if(!_isWorkingOut) setState((){_duration=Duration.zero;_calories=0.0;_avgHeartRate=0;_heartRate=0;_hrSpots=[];}); }),
       const SizedBox(width: 15),
-      Opacity(
-        opacity: _isWorkingOut ? 0.3 : 1.0,
-        child: _actionBtn(Icons.save, "저장", _handleSaveRecord),
-      ),
+      Opacity(opacity: _isWorkingOut ? 0.3 : 1.0, child: _actionBtn(Icons.save, "저장", _handleSaveRecord)),
       const SizedBox(width: 15),
       _actionBtn(Icons.calendar_month, "기록", () => Navigator.push(context, MaterialPageRoute(builder: (c) => HistoryScreen(records: _records, onSync: _saveToPrefs)))),
     ],
@@ -292,7 +281,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
     int totalMinutes = 0;
     DateTime now = DateTime.now();
     DateTime sevenDaysAgo = now.subtract(const Duration(days: 7));
-
     for (var record in widget.records) {
       DateTime recordDate = DateTime.tryParse(record.id) ?? DateTime.now(); 
       if (recordDate.isAfter(sevenDaysAgo)) {
@@ -310,25 +298,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
-      appBar: AppBar(
-        title: const Text("운동 히스토리", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.black,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
+      appBar: AppBar(title: const Text("운동 히스토리", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), backgroundColor: Colors.black, elevation: 0, iconTheme: const IconThemeData(color: Colors.white)),
       body: Column(
         children: [
-          // ⭐ 통계 배너 축소 (컴팩트 디자인)
+          // ⭐ 통계 배너 크기 축소 (컴팩트 디자인)
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF2C2C2C), Color(0xFF3D3D3D)], 
-              ),
-              borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: Colors.white10),
-            ),
+            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+            decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF2C2C2C), Color(0xFF3D3D3D)]), borderRadius: BorderRadius.circular(15)),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -338,60 +315,29 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ],
             ),
           ),
-          
           TableCalendar(
             firstDay: DateTime.utc(2024, 1, 1), lastDay: DateTime.utc(2030, 12, 31), focusedDay: _focusedDay, locale: 'ko_KR',
             selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
             onDaySelected: (sel, foc) => setState(() { _selectedDay = sel; _focusedDay = foc; }),
-            eventLoader: (day) {
-              String formatted = DateFormat('yyyy-MM-dd').format(day);
-              return widget.records.where((r) => r.date == formatted).toList();
-            },
-            calendarStyle: const CalendarStyle(
-              defaultTextStyle: TextStyle(color: Colors.white70),
-              weekendTextStyle: TextStyle(color: Colors.redAccent),
-              markerDecoration: BoxDecoration(color: Colors.greenAccent, shape: BoxShape.circle),
-              selectedDecoration: BoxDecoration(color: Colors.blueAccent, shape: BoxShape.circle),
-              todayDecoration: BoxDecoration(color: Colors.white24, shape: BoxShape.circle),
-            ),
+            eventLoader: (day) => widget.records.where((r) => r.date == DateFormat('yyyy-MM-dd').format(day)).toList(),
+            calendarStyle: const CalendarStyle(defaultTextStyle: TextStyle(color: Colors.white70), weekendTextStyle: TextStyle(color: Colors.redAccent), markerDecoration: BoxDecoration(color: Colors.greenAccent, shape: BoxShape.circle), selectedDecoration: BoxDecoration(color: Colors.blueAccent, shape: BoxShape.circle), todayDecoration: BoxDecoration(color: Colors.white24, shape: BoxShape.circle)),
             headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true, titleTextStyle: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Divider(color: Colors.white10, thickness: 1),
-          ),
+          const Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Divider(color: Colors.white10, thickness: 1)),
           Expanded(
-            child: filtered.isEmpty 
-              ? const Center(child: Text("기록이 없습니다.", style: TextStyle(color: Colors.white38)))
-              : ListView.builder(
-                  padding: const EdgeInsets.only(top: 10),
-                  itemCount: filtered.length,
-                  itemBuilder: (c, i) => _buildRecordCard(filtered[i]),
-                ),
+            child: filtered.isEmpty ? const Center(child: Text("기록이 없습니다.", style: TextStyle(color: Colors.white38))) : ListView.builder(padding: const EdgeInsets.only(top: 10), itemCount: filtered.length, itemBuilder: (c, i) => _buildRecordCard(filtered[i])),
           ),
         ],
       ),
     );
   }
 
-  Widget _miniStat(String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 10)),
-        const SizedBox(height: 3),
-        Text(value, style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
+  Widget _miniStat(String l, String v, Color c) => Column(children: [Text(l, style: const TextStyle(color: Colors.white54, fontSize: 10)), const SizedBox(height: 3), Text(v, style: TextStyle(color: c, fontSize: 16, fontWeight: FontWeight.bold))]);
 
   Widget _buildRecordCard(WorkoutRecord r) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E), 
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white10),
-      ),
+      decoration: BoxDecoration(color: const Color(0xFF1E1E1E), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white10)),
       child: InkWell(
         onLongPress: () => _showDeleteDialog(r),
         borderRadius: BorderRadius.circular(20),
@@ -399,19 +345,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
           padding: const EdgeInsets.all(18),
           child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: Colors.blueAccent.withOpacity(0.1), shape: BoxShape.circle),
-                child: const Icon(Icons.directions_bike, color: Colors.blueAccent, size: 22),
-              ),
+              Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.blueAccent.withOpacity(0.1), shape: BoxShape.circle), child: const Icon(Icons.directions_bike, color: Colors.blueAccent, size: 22)),
               const SizedBox(width: 18),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(r.date, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                  const SizedBox(height: 4),
-                  Text("${r.duration.inMinutes}분 운동 / 평균 ${r.avgHR}bpm", style: const TextStyle(color: Colors.white38, fontSize: 12)),
-                ]),
-              ),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(r.date, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)), const SizedBox(height: 4), Text("${r.duration.inMinutes}분 운동 / 평균 ${r.avgHR}bpm", style: const TextStyle(color: Colors.white38, fontSize: 12))])),
               Text("${r.calories.toStringAsFixed(1)}", style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.w900, fontSize: 18)),
               const Text(" kcal", style: TextStyle(color: Colors.white38, fontSize: 10)),
             ],
@@ -430,8 +366,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         TextButton(onPressed: () => Navigator.pop(context), child: const Text("취소", style: TextStyle(color: Colors.white38))),
         TextButton(onPressed: () {
           setState(() { widget.records.removeWhere((rec) => rec.id == r.id); });
-          widget.onSync();
-          Navigator.pop(context);
+          widget.onSync(); Navigator.pop(context);
         }, child: const Text("삭제", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold))),
       ],
     ));
