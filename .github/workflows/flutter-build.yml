@@ -1,4 +1,4 @@
-name: BikeFit Emergency Recovery Build
+name: BikeFit Final Integrated Build
 on: [push, workflow_dispatch]
 
 jobs:
@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Java & Flutter Setup
+      - name: Setup Java & Flutter
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -17,20 +17,25 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 꼬인 환경 강제 복구 및 빌드
+      - name: 환경 재생성 및 리소스 생성
         run: |
-          # 1. 에러의 원인인 안드로이드 폴더 삭제 및 재생성
+          # 1. 안드로이드 폴더 초기화
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           
-          # 2. [중요] 앱 이름(Indoor_fit_app)과 권한을 AndroidManifest에 강제 주입
+          # 2. 아이콘 및 스플래시 화면 생성 (pubspec.yaml 기반)
+          flutter pub get
+          flutter pub run flutter_launcher_icons:main || true
+          flutter pub run flutter_native_splash:create || true
+          
+          # 3. AndroidManifest.xml에 권한 및 앱 이름 주입
           cat <<EOF > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.overthebike.over_the_bike_fit">
               <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
               <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
               <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-              <application android:label="Indoor_fit_app" android:icon="@mipmap/ic_launcher">
-                  <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:theme="@android:style/Theme.Black.NoTitleBar">
+              <application android:label="Indoor_fit_app" android:icon="@mipmap/launcher_icon">
+                  <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:theme="@style/LaunchTheme">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN"/>
                           <category android:name="android.intent.category.LAUNCHER"/>
@@ -41,15 +46,14 @@ jobs:
           </manifest>
           EOF
 
-          # 3. [중요] dexBuilderDebug(용량초과) 에러 방지 설정
+          # 4. dexBuilder 에러 방지 (용량 제한 해제)
           sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
-          
-          # 4. 빌드 실행
-          flutter pub get
-          flutter build apk --debug --no-tree-shake-icons
+
+      - name: 최종 APK 빌드
+        run: flutter build apk --debug --no-tree-shake-icons
 
       - name: APK 파일 추출
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Fixed_APK
+          name: IndoorFit_Final_Version
           path: build/app/outputs/flutter-apk/app-debug.apk
