@@ -42,7 +42,6 @@ class BikeFitApp extends StatelessWidget {
   }
 }
 
-// --- 메인 운동 화면 (UI 유지 + Overflow 수정) ---
 class WorkoutScreen extends StatefulWidget {
   const WorkoutScreen({Key? key}) : super(key: key);
   @override _WorkoutScreenState createState() => _WorkoutScreenState();
@@ -153,11 +152,10 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   Widget build(BuildContext context) {
     double progress = (_calories / _goalCalories).clamp(0.0, 1.0);
     return Scaffold(
-      resizeToAvoidBottomInset: true, // 키보드 대응
       body: Stack(children: [
         Positioned.fill(child: Opacity(opacity: 0.8, child: Image.asset('assets/background.png', fit: BoxFit.cover, errorBuilder: (c,e,s)=>Container(color: Colors.black)))),
         SafeArea(
-          child: SingleChildScrollView( // 키보드 올라올 때 오버플로우 방지
+          child: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: SizedBox(
@@ -234,7 +232,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   Widget _actionBtn(IconData i, String l, VoidCallback t) => Column(children: [GestureDetector(onTap: t, child: Container(width: 55, height: 55, decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.white24)), child: Icon(i, color: Colors.white, size: 24))), const SizedBox(height: 6), Text(l, style: const TextStyle(fontSize: 10, color: Colors.white70))]);
 }
 
-// --- 히스토리 리포트 화면 (달력 압축 + 그래프 디테일 수치) ---
+// --- 히스토리 리포트 화면 (그래프 빌드 에러 수정됨) ---
 class HistoryScreen extends StatefulWidget {
   final List<WorkoutRecord> records;
   final VoidCallback onSync;
@@ -274,7 +272,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     ));
   }
 
-  // ✅ 그래프 팝업: 높이 축소 + 소수점 1자리 수치 + 지방연소구간 표시
+  // ✅ 에러가 발생한 부분을 최신 문법으로 수정한 그래프 팝업
   void _showGraphPopup(String title, int days, Color color) {
     final limit = DateTime.now().subtract(Duration(days: days));
     var filtered = _currentRecords.where((r) => DateTime.parse(r.date).isAfter(limit)).toList().reversed.toList();
@@ -294,7 +292,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
             HorizontalLine(y: 200, color: Colors.red.withOpacity(0.05), strokeWidth: 35, label: HorizontalLineLabel(show: true, alignment: Alignment.bottomRight, style: const TextStyle(fontSize: 9, color: Colors.red), labelResolver: (line) => '고강도 유산소')),
           ]),
           barGroups: List.generate(filtered.length, (i) => BarChartGroupData(x: i, barRods: [BarChartRodData(toY: filtered[i].calories, color: color, width: 14, borderRadius: const BorderRadius.vertical(top: Radius.circular(4)), backDrawRodData: BackgroundBarChartRodData(show: true, toY: maxCal * 1.2, color: Colors.grey.withOpacity(0.05)) )], showingTooltipIndicators: [0])),
-          barTouchData: BarTouchData(enabled: false, touchTooltipData: BarTouchTooltipData(getTooltipColor: (_) => Colors.transparent, tooltipMargin: 4, getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem("${rod.toY.toStringAsFixed(1)}", TextStyle(color: color.withOpacity(0.9), fontWeight: FontWeight.bold, fontSize: 11)))),
+          barTouchData: BarTouchData(
+            enabled: false, 
+            touchTooltipData: BarTouchTooltipData(
+              // ✅ 에러가 났던 getTooltipColor를 제거하고 배경색을 투명하게 설정
+              tooltipBgColor: Colors.transparent, 
+              tooltipMargin: 4, 
+              getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
+                "${rod.toY.toStringAsFixed(1)}", 
+                TextStyle(color: color.withOpacity(0.9), fontWeight: FontWeight.bold, fontSize: 11)
+              )
+            )
+          ),
           gridData: const FlGridData(show: false), titlesData: const FlTitlesData(show: false), borderData: FlBorderData(show: false), 
         ))),
         const SizedBox(height: 10),
@@ -330,7 +339,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
         appBar: AppBar(title: const Text("기록 리포트"), backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0),
         body: SingleChildScrollView(child: Column(children: [
           GestureDetector(onTap: _showWeightSetting, child: Container(margin: const EdgeInsets.fromLTRB(16, 16, 16, 8), padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15), decoration: BoxDecoration(color: const Color(0xFF607D8B), borderRadius: BorderRadius.circular(15)), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text("나의 현재 체중", style: TextStyle(color: Colors.white)), Text("${_weight}kg", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18))]))),
-          
           Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Row(children: [
             _colorBtn("일간", Colors.redAccent, () => _showGraphPopup("일간", 1, Colors.redAccent)),
             const SizedBox(width: 8),
@@ -338,8 +346,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
             const SizedBox(width: 8),
             _colorBtn("월간", Colors.blueAccent, () => _showGraphPopup("월간", 30, Colors.blueAccent)),
           ])),
-
-          // ✅ 달력 디자인 최적화: rowHeight 축소(35)로 가독성 및 공간 확보
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), 
             padding: const EdgeInsets.only(bottom: 5),
@@ -359,7 +365,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
             ),
           ),
-
           ListView.builder(
             shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
             itemCount: dailyRecords.length,
