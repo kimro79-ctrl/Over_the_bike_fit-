@@ -42,6 +42,7 @@ class BikeFitApp extends StatelessWidget {
   }
 }
 
+// --- 메인 운동 화면 ---
 class WorkoutScreen extends StatefulWidget {
   const WorkoutScreen({Key? key}) : super(key: key);
   @override _WorkoutScreenState createState() => _WorkoutScreenState();
@@ -80,11 +81,13 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     });
   }
 
+  // ✅ 기기 검색 로직 강화 (이름이 없는 기기도 표시)
   void _showDeviceScanPopup() async {
     if (_isWatchConnected) return;
     await [Permission.bluetoothScan, Permission.bluetoothConnect, Permission.location].request();
     _filteredResults.clear();
     await FlutterBluePlus.startScan(timeout: const Duration(seconds: 15));
+    
     showModalBottomSheet(
       context: context, 
       backgroundColor: const Color(0xFF1E1E1E), 
@@ -92,14 +95,42 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))), 
       builder: (context) => StatefulBuilder(builder: (context, setModalState) {
         _scanSubscription = FlutterBluePlus.onScanResults.listen((results) { 
-          if (mounted) setModalState(() { _filteredResults = results.where((r) => r.device.platformName.isNotEmpty).toList(); }); 
+          if (mounted) {
+            setModalState(() { 
+              // 모든 검색 결과를 저장 (필터링 해제)
+              _filteredResults = results; 
+            }); 
+          }
         });
-        return Container(padding: const EdgeInsets.all(20), height: MediaQuery.of(context).size.height * 0.4, child: Column(children: [
-          Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 20),
-          const Text("워치 검색", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          Expanded(child: _filteredResults.isEmpty ? const Center(child: CircularProgressIndicator(color: Colors.greenAccent)) : ListView.builder(itemCount: _filteredResults.length, itemBuilder: (context, index) => ListTile(leading: const Icon(Icons.watch, color: Colors.blueAccent), title: Text(_filteredResults[index].device.platformName), onTap: () { Navigator.pop(context); _connectToDevice(_filteredResults[index].device); }))) 
-        ]));
+        
+        return Container(
+          padding: const EdgeInsets.all(20), 
+          height: MediaQuery.of(context).size.height * 0.4, 
+          child: Column(children: [
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 20),
+            const Text("워치 검색", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text("이름이 없으면 주소(ID)를 확인하세요", style: TextStyle(fontSize: 10, color: Colors.white38)),
+            const SizedBox(height: 10),
+            Expanded(
+              child: _filteredResults.isEmpty 
+                ? const Center(child: CircularProgressIndicator(color: Colors.greenAccent)) 
+                : ListView.builder(
+                    itemCount: _filteredResults.length, 
+                    itemBuilder: (context, index) {
+                      final device = _filteredResults[index].device;
+                      // 이름이 비어있으면 원격 ID(MAC 주소) 표시
+                      final String name = device.platformName.isNotEmpty ? device.platformName : "알 수 없는 기기 (${device.remoteId})";
+                      return ListTile(
+                        leading: const Icon(Icons.watch, color: Colors.blueAccent), 
+                        title: Text(name, style: const TextStyle(fontSize: 13, color: Colors.white)), 
+                        onTap: () { Navigator.pop(context); _connectToDevice(device); }
+                      );
+                    }
+                  )
+            ) 
+          ])
+        );
       })).whenComplete(() { FlutterBluePlus.stopScan(); _scanSubscription?.cancel(); });
   }
 
@@ -232,7 +263,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   Widget _actionBtn(IconData i, String l, VoidCallback t) => Column(children: [GestureDetector(onTap: t, child: Container(width: 55, height: 55, decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.white24)), child: Icon(i, color: Colors.white, size: 24))), const SizedBox(height: 6), Text(l, style: const TextStyle(fontSize: 10, color: Colors.white70))]);
 }
 
-// --- 히스토리 리포트 화면 (그래프 빌드 에러 수정됨) ---
+// --- 히스토리 리포트 화면 ---
 class HistoryScreen extends StatefulWidget {
   final List<WorkoutRecord> records;
   final VoidCallback onSync;
@@ -272,43 +303,77 @@ class _HistoryScreenState extends State<HistoryScreen> {
     ));
   }
 
-  // ✅ 에러가 발생한 부분을 최신 문법으로 수정한 그래프 팝업
+  // ✅ 지방 연소 구간이 표시되는 디테일 그래프 팝업
   void _showGraphPopup(String title, int days, Color color) {
     final limit = DateTime.now().subtract(Duration(days: days));
     var filtered = _currentRecords.where((r) => DateTime.parse(r.date).isAfter(limit)).toList().reversed.toList();
+    
     double maxCal = filtered.isEmpty ? 100 : filtered.map((e) => e.calories).reduce((a, b) => a > b ? a : b);
     if (maxCal < 200) maxCal = 200;
 
-    showModalBottomSheet(context: context, backgroundColor: Colors.white, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))), 
-      builder: (context) => Container(height: 350, padding: const EdgeInsets.fromLTRB(20, 15, 20, 20), child: Column(children: [
-        Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
-        const SizedBox(height: 15),
-        Text("$title 운동 효율 분석 (kcal)", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
-        const SizedBox(height: 30),
-        Expanded(child: BarChart(BarChartData(
-          alignment: BarChartAlignment.spaceAround, maxY: maxCal * 1.4,
-          extraLinesData: ExtraLinesData(horizontalLines: [
-            HorizontalLine(y: 100, color: Colors.orange.withOpacity(0.1), strokeWidth: 35, label: HorizontalLineLabel(show: true, alignment: Alignment.bottomRight, style: const TextStyle(fontSize: 9, color: Colors.orange), labelResolver: (line) => '지방 연소')),
-            HorizontalLine(y: 200, color: Colors.red.withOpacity(0.05), strokeWidth: 35, label: HorizontalLineLabel(show: true, alignment: Alignment.bottomRight, style: const TextStyle(fontSize: 9, color: Colors.red), labelResolver: (line) => '고강도 유산소')),
-          ]),
-          barGroups: List.generate(filtered.length, (i) => BarChartGroupData(x: i, barRods: [BarChartRodData(toY: filtered[i].calories, color: color, width: 14, borderRadius: const BorderRadius.vertical(top: Radius.circular(4)), backDrawRodData: BackgroundBarChartRodData(show: true, toY: maxCal * 1.2, color: Colors.grey.withOpacity(0.05)) )], showingTooltipIndicators: [0])),
-          barTouchData: BarTouchData(
-            enabled: false, 
-            touchTooltipData: BarTouchTooltipData(
-              // ✅ 에러가 났던 getTooltipColor를 제거하고 배경색을 투명하게 설정
-              tooltipBgColor: Colors.transparent, 
-              tooltipMargin: 4, 
-              getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
-                "${rod.toY.toStringAsFixed(1)}", 
-                TextStyle(color: color.withOpacity(0.9), fontWeight: FontWeight.bold, fontSize: 11)
+    showModalBottomSheet(
+      context: context, 
+      backgroundColor: Colors.white, 
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))), 
+      builder: (context) => Container(
+        height: 350, 
+        padding: const EdgeInsets.fromLTRB(20, 15, 20, 20),
+        child: Column(children: [
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 15),
+          Text("$title 운동 효율 분석 (kcal)", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+          const SizedBox(height: 30),
+          Expanded(
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: maxCal * 1.4,
+                extraLinesData: ExtraLinesData(
+                  horizontalLines: [
+                    HorizontalLine(y: 100, color: Colors.orange.withOpacity(0.1), strokeWidth: 35, label: HorizontalLineLabel(show: true, alignment: Alignment.bottomRight, style: const TextStyle(fontSize: 9, color: Colors.orange), labelResolver: (line) => '지방 연소')),
+                    HorizontalLine(y: 200, color: Colors.red.withOpacity(0.05), strokeWidth: 35, label: HorizontalLineLabel(show: true, alignment: Alignment.bottomRight, style: const TextStyle(fontSize: 9, color: Colors.red), labelResolver: (line) => '고강도 유산소')),
+                  ],
+                ),
+                barGroups: List.generate(filtered.length, (i) => BarChartGroupData(
+                  x: i, 
+                  barRods: [
+                    BarChartRodData(
+                      toY: filtered[i].calories, 
+                      color: color, 
+                      width: 14,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                      backDrawRodData: BackgroundBarChartRodData(show: true, toY: maxCal * 1.2, color: Colors.grey.withOpacity(0.05)),
+                    )
+                  ],
+                  showingTooltipIndicators: [0],
+                )),
+                barTouchData: BarTouchData(
+                  enabled: false,
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipColor: (_) => Colors.transparent,
+                    tooltipMargin: 4,
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
+                      "${rod.toY.toStringAsFixed(1)}",
+                      TextStyle(color: color.withOpacity(0.9), fontWeight: FontWeight.bold, fontSize: 11),
+                    ),
+                  ),
+                ),
+                gridData: const FlGridData(show: false),
+                titlesData: const FlTitlesData(show: false),
+                borderData: FlBorderData(show: false), 
               )
-            )
+            ),
           ),
-          gridData: const FlGridData(show: false), titlesData: const FlTitlesData(show: false), borderData: FlBorderData(show: false), 
-        ))),
-        const SizedBox(height: 10),
-        Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.bolt, size: 12, color: Colors.orange), Text(" 배경 구간: 소모 칼로리별 운동 강도 가이드", style: TextStyle(fontSize: 10, color: Colors.grey))])
-      ]))
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.bolt, size: 12, color: Colors.orange),
+              const Text(" 배경 구간: 소모 칼로리별 운동 강도 가이드", style: TextStyle(fontSize: 10, color: Colors.grey)),
+            ],
+          )
+        ]),
+      )
     );
   }
 
@@ -339,6 +404,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         appBar: AppBar(title: const Text("기록 리포트"), backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0),
         body: SingleChildScrollView(child: Column(children: [
           GestureDetector(onTap: _showWeightSetting, child: Container(margin: const EdgeInsets.fromLTRB(16, 16, 16, 8), padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15), decoration: BoxDecoration(color: const Color(0xFF607D8B), borderRadius: BorderRadius.circular(15)), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text("나의 현재 체중", style: TextStyle(color: Colors.white)), Text("${_weight}kg", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18))]))),
+          
           Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Row(children: [
             _colorBtn("일간", Colors.redAccent, () => _showGraphPopup("일간", 1, Colors.redAccent)),
             const SizedBox(width: 8),
@@ -346,6 +412,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             const SizedBox(width: 8),
             _colorBtn("월간", Colors.blueAccent, () => _showGraphPopup("월간", 30, Colors.blueAccent)),
           ])),
+
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), 
             padding: const EdgeInsets.only(bottom: 5),
@@ -353,7 +420,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: TableCalendar(
               locale: 'ko_KR', firstDay: DateTime(2024), lastDay: DateTime(2030), focusedDay: _focusedDay,
               rowHeight: 35, daysOfWeekHeight: 25,
-              headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true, titleTextStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.bold), headerPadding: EdgeInsets.symmetric(vertical: 5)),
+              headerStyle: const HeaderStyle(
+                formatButtonVisible: false, titleCentered: true,
+                titleTextStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                headerPadding: EdgeInsets.symmetric(vertical: 5),
+              ),
               selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
               onDaySelected: (sel, foc) => setState(() { _selectedDay = sel; _focusedDay = foc; }),
               eventLoader: (day) => _currentRecords.where((r) => r.date == DateFormat('yyyy-MM-dd').format(day)).toList(),
@@ -361,10 +432,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 markerDecoration: BoxDecoration(color: Colors.orangeAccent, shape: BoxShape.circle), 
                 selectedDecoration: BoxDecoration(color: Color(0xFF4285F4), shape: BoxShape.circle),
                 todayDecoration: BoxDecoration(color: Color(0xFFE3F2FD), shape: BoxShape.circle),
-                todayTextStyle: TextStyle(color: Colors.black), markerSize: 6, 
+                todayTextStyle: TextStyle(color: Colors.black),
+                markerSize: 6, 
               ),
             ),
           ),
+
           ListView.builder(
             shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
             itemCount: dailyRecords.length,
@@ -372,7 +445,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
               final r = dailyRecords[index];
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), 
-                elevation: 0, color: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0, color: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 child: ListTile(
                   onLongPress: () => _confirmDelete(r.id),
                   leading: const Icon(Icons.directions_bike, color: Colors.blueAccent),
@@ -388,5 +462,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _colorBtn(String label, Color color, VoidCallback onTap) => Expanded(child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white, elevation: 0, padding: const EdgeInsets.symmetric(vertical: 10), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), onPressed: onTap, child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))));
+  Widget _colorBtn(String label, Color color, VoidCallback onTap) => Expanded(child: ElevatedButton(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: color, foregroundColor: Colors.white, elevation: 0,
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    ),
+    onPressed: onTap, child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+  ));
 }
