@@ -1,0 +1,20 @@
+name: Generate JKS Key
+on:
+  workflow_dispatch: # 사용자가 직접 버튼을 누를 때만 실행
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Key
+        run: |
+          keytool -genkey -v -keystore my-release-key.jks \
+          -keyalg RSA -keysize 2048 -validity 10000 \
+          -alias my-key-alias -storepass mypassword123 \
+          -keypass mypassword123 -dname "CN=BikeFit, OU=Dev, O=MyCompany, L=Seoul, S=Seoul, C=KR"
+
+      - name: Upload Key Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: keystore-file
+          path: my-release-key.jks
