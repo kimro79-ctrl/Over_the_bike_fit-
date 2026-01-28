@@ -1,4 +1,5 @@
-ㅣimport 'dart:async';
+// 1. 모든 import 구문은 반드시 파일 최상단에 위치해야 합니다.
+import 'dart:async'; // Timer, StreamSubscription 필수 라이브러리
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,12 +18,14 @@ void main() async {
   runApp(const BikeFitApp());
 }
 
+// 운동 기록 데이터 모델
 class WorkoutRecord {
   final String id;
   final String date;
   final int avgHR;
   final double calories;
   final Duration duration;
+
   WorkoutRecord(this.id, this.date, this.avgHR, this.calories, this.duration);
 
   Map<String, dynamic> toJson() => {
@@ -51,13 +54,13 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   int _heartRate = 0, _avgHeartRate = 0;
   double _calories = 0.0, _goalCalories = 300.0;
   Duration _duration = Duration.zero;
-  Timer? _workoutTimer;
+  Timer? _workoutTimer; // dart:async 필요
   bool _isWorkingOut = false, _isWatchConnected = false;
   List<FlSpot> _hrSpots = [];
   double _timeCounter = 0;
   List<WorkoutRecord> _records = [];
   List<ScanResult> _filteredResults = [];
-  StreamSubscription? _scanSubscription;
+  StreamSubscription? _scanSubscription; // dart:async 필요
 
   @override
   void initState() { super.initState(); _loadInitialData(); }
@@ -80,16 +83,14 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     });
   }
 
-  // --- 워치 스캔 팝업 (강력한 스캔 로직 적용) ---
+  // 블루투스 스캔 팝업
   void _showDeviceScanPopup() async {
     if (_isWatchConnected) return;
     await [Permission.bluetoothScan, Permission.bluetoothConnect, Permission.location].request();
     _filteredResults.clear();
 
-    // 갤럭시 워치 검색 성능 향상을 위해 lowLatency 모드 적용
     await FlutterBluePlus.startScan(
       timeout: const Duration(seconds: 15),
-      androidUsesFineLocation: true,
       androidScanMode: AndroidScanMode.lowLatency,
     );
 
@@ -272,7 +273,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     _selectedDay = _focusedDay; 
   }
 
-  // ✅ 데이터 시각화: 최근 7일 막대 그래프 (빌드 에러 해결 문법)
+  // 데이터 시각화 팝업
   void _showGraphPopup() {
     final limit = DateTime.now().subtract(const Duration(days: 7));
     var filtered = _currentRecords.where((r) => DateTime.parse(r.date).isAfter(limit)).toList();
@@ -287,10 +288,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
         Expanded(child: BarChart(BarChartData(
           maxY: maxCal * 1.3,
           barGroups: List.generate(filtered.length, (i) => BarChartGroupData(x: i, barRods: [BarChartRodData(toY: filtered[i].calories, color: Colors.blueAccent, width: 18, borderRadius: BorderRadius.circular(4))])),
-          // ✅ 에러가 났던 getTooltipColor 대신 최신 문법 적용
+          // ✅ 로그에서 지적된 에러 해결: 구버전 문법 tooltipBgColor 사용
           barTouchData: BarTouchData(
             touchTooltipData: BarTouchTooltipData(
-              getTooltipColor: (group) => Colors.blueAccent.withOpacity(0.9),
+              tooltipBgColor: Colors.blueAccent.withOpacity(0.9),
             ),
           ),
           gridData: const FlGridData(show: false), 
