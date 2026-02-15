@@ -1,8 +1,28 @@
-      - name: Generate PEM for Google
+name: Generate JKS and PEM Key
+on:
+  workflow_dispatch: # 사용자가 직접 버튼을 누를 때 실행
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Key
         run: |
-          keytool -export -rfc -keystore my-release-key.jks -alias my-key-alias -file upload_certificate.pem -storepass Sodomaki79
-      - name: Upload PEM Artifact
+          keytool -genkey -v -keystore my-release-key.jks \
+          -keyalg RSA -keysize 2048 -validity 10000 \
+          -alias my-key-alias -storepass Sodomaki79 \
+          -keypass Sodomaki79 -dname "CN=BikeFit, OU=Dev, O=MyCompany, L=Seoul, S=Seoul, C=KR"
+
+      - name: Extract PEM for Google
+        run: |
+          keytool -export -rfc -keystore my-release-key.jks \
+          -alias my-key-alias -file upload_certificate.pem \
+          -storepass Sodomaki79
+
+      - name: Upload Files
         uses: actions/upload-artifact@v4
         with:
-          name: google-reset-file
-          path: upload_certificate.pem
+          name: google-reset-files
+          path: |
+            my-release-key.jks
+            upload_certificate.pem
