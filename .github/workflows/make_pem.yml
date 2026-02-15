@@ -1,0 +1,23 @@
+name: Get Google PEM File
+on:
+  workflow_dispatch:
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create PEM from Secret
+        run: |
+          # 1. 기존에 등록한 Secrets에서 키 파일을 복원합니다.
+          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > my-release-key.jks
+          
+          # 2. 구글 제출용 .pem 파일을 추출합니다.
+          keytool -export -rfc -keystore my-release-key.jks \
+          -alias my-key-alias -file upload_certificate.pem \
+          -storepass Sodomaki79
+
+      - name: Download PEM Only
+        uses: actions/upload-artifact@v4
+        with:
+          name: google-submission-file
+          path: upload_certificate.pem
