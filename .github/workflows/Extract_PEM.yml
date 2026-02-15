@@ -1,4 +1,4 @@
-name: Extract PEM Only
+name: Final PEM Extract
 on:
   workflow_dispatch:
 
@@ -6,21 +6,21 @@ jobs:
   get_pem:
     runs-on: ubuntu-latest
     steps:
-      - name: Make PEM File
+      - name: Generate New Key and Extract PEM
         run: |
-          # 1. 키 파일 생성 (Sodomaki79 비밀번호 사용)
-          keytool -genkey -v -keystore temp.jks \
+          # 1. 즉석에서 새 키 생성 (비밀번호: Sodomaki79)
+          keytool -genkey -v -keystore final.jks \
           -keyalg RSA -keysize 2048 -validity 10000 \
           -alias my-key-alias -storepass Sodomaki79 \
           -keypass Sodomaki79 -dname "CN=BikeFit, OU=Dev, O=MyCompany, L=Seoul, S=Seoul, C=KR"
           
-          # 2. 구글 제출용 PEM 추출
-          keytool -export -rfc -keystore temp.jks \
+          # 2. 구글 제출용 PEM 파일 바로 추출
+          keytool -export -rfc -keystore final.jks \
           -alias my-key-alias -file upload_certificate.pem \
           -storepass Sodomaki79
 
-      - name: Download
+      - name: Upload PEM
         uses: actions/upload-artifact@v4
         with:
-          name: google-pem-file
+          name: google-final-pem
           path: upload_certificate.pem
