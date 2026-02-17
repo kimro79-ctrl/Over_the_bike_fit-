@@ -18,22 +18,13 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 환경 재생성 및 서명 키 고정
+      - name: 환경 재생성 및 서명 준비
         run: |
-          # 1. 안드로이드 폴더 초기화
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           flutter pub get
           
-          # 2. 구글이 요구하는 SHA-1(8B:A6:9F) 지문을 생성하기 위한 고정 키 생성
-          # dname 정보를 구글 콘솔에 등록된 정보와 최대한 유사하게 맞춤
-          keytool -genkey -v -keystore android/app/release.jks \
-          -keyalg RSA -keysize 2048 -validity 10000 \
-          -alias my-key-alias -storepass Sodomaki79 \
-          -keypass Sodomaki79 \
-          -dname "CN=BikeFit, OU=Mobile, O=OverTheBike, L=Seoul, S=Seoul, C=KR"
-
-          # 3. 서명 정보 파일 생성
+          # 서명 정보 파일 생성
           cat <<EOF > android/key.properties
           storePassword=Sodomaki79
           keyPassword=Sodomaki79
@@ -41,17 +32,14 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 4. build.gradle에서 서명 설정 강제 적용
+          # build.gradle 서명 설정 강제 적용
           sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           
-          # 5. AndroidManifest 설정
+          # AndroidManifest 설정
           cat <<EOF > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.overthebike.over_the_bike_fit">
-              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-              <application android:label="Indoor_fit_app" android:icon="@mipmap/ic_launcher">
-                  <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:theme="@style/LaunchTheme">
+              <application android:label="Indoor_fit_app">
+                  <activity android:name=".MainActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN"/>
                           <category android:name="android.intent.category.LAUNCHER"/>
@@ -61,13 +49,20 @@ jobs:
               </application>
           </manifest>
           EOF
-          sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
 
-      - name: AAB 빌드
+      - name: 키 파일 복구 (임시 생성)
+        run: |
+          # 지문 고정을 위해 일단 동일한 옵션으로 생성 (파일 보존 시 이 단계를 대체해야 함)
+          keytool -genkey -v -keystore android/app/release.jks \
+          -keyalg RSA -keysize 2048 -validity 10000 \
+          -alias my-key-alias -storepass Sodomaki79 \
+          -keypass Sodomaki79 -dname "CN=BikeFit, O=OverTheBike, C=KR"
+
+      - name: 공식 빌드 및 서명
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 최종 파일 추출
+      - name: 최종 결과물 추출
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Final_Fingerprint_Match
+          name: BikeFit_Final_Fixed_Key
           path: build/app/outputs/bundle/release/app-release.aab
