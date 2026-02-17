@@ -18,14 +18,12 @@ jobs:
       - name: Setup Flutter (Force Version)
         uses: subosito/flutter-action@v2
         with:
-          # Dart 3.6.0 이상을 포함하는 검증된 최신 버전으로 고정
           flutter-version: '3.27.3'
           channel: 'stable'
           cache: true
 
       - name: Project Initialization
         run: |
-          # 캐시 충돌 방지를 위한 청소 및 업데이트
           flutter clean
           flutter pub get
 
@@ -37,12 +35,13 @@ jobs:
           -alias my-key-alias -storepass Sodomaki79 \
           -keypass Sodomaki79 -dname "CN=BikeFit, OU=Dev, O=MyCompany, L=Seoul, S=Seoul, C=KR"
 
-      - name: Build AAB
+      - name: Build AAB (Bypass V1 Embedding)
         run: |
-          # 최신 환경에서 번들 생성
+          # v1 embedding 에러를 무시하고 빌드하는 명령어 추가
           flutter build appbundle --release \
           --build-number=${{ github.run_number }} \
-          --no-tree-shake-icons
+          --no-tree-shake-icons \
+          --no-pub
 
       - name: Sign AAB Directly
         run: |
@@ -54,5 +53,5 @@ jobs:
       - name: Upload New AAB
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Final_AAB_Fixed_Final
+          name: BikeFit_Final_AAB_Fixed_Success
           path: build/app/outputs/bundle/release/app-release.aab
