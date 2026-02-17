@@ -14,26 +14,27 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+          
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: [모바일 최적화] 자동 키 생성 및 프로젝트 재구성
+      - name: 모바일 전용 자동 빌드 세팅
         run: |
-          # 1. 안드로이드 폴더 완전 초기화
+          # 1. 안드로이드 폴더 재구성
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           
-          # 2. 빌드 서버에서 고정된 정보로 '진짜' JKS 생성
+          # 2. 진짜 JKS 키 파일 자동 생성 (리포지토리 jks 무시)
           mkdir -p android/app
           keytool -genkey -v -keystore android/app/release.jks \
           -keyalg RSA -keysize 2048 -validity 10000 \
           -alias my-key-alias -storepass Sodomaki79 \
           -keypass Sodomaki79 -dname "CN=BikeFit, O=OverTheBike, C=KR"
 
-          # 3. 서명 정보 고정 연결
+          # 3. 서명 정보 연결
           cat <<EOF > android/key.properties
           storePassword=Sodomaki79
           keyPassword=Sodomaki79
@@ -41,57 +42,7 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 4. MainActivity.kt 경로 및 소스 강제 생성
+          # 4. MainActivity 및 사용자 매니페스트 주입
           mkdir -p android/app/src/main/kotlin/com/overthebike/over_the_bike_fit
           cat <<EOF > android/app/src/main/kotlin/com/overthebike/over_the_bike_fit/MainActivity.kt
-          package com.overthebike.over_the_bike_fit
-          import io.flutter.embedding.android.FlutterActivity
-          class MainActivity: FlutterActivity() {
-          }
-          EOF
-
-          # 5. 사용자님이 주신 AndroidManifest.xml 100% 반영
-          cat <<'EOF' > android/app/src/main/AndroidManifest.xml
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.overthebike.over_the_bike_fit">
-              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-              <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
-              <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
-              <application
-                  android:label="Indoor_fit_app" 
-                  android:name="${applicationName}"
-                  android:icon="@mipmap/ic_launcher"
-                  android:allowBackup="false">
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true"
-                      android:launchMode="singleTop"
-                      android:theme="@style/LaunchTheme"
-                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-                      android:hardwareAccelerated="true"
-                      android:windowSoftInputMode="adjustResize">
-                      <meta-data android:name="io.flutter.embedding.android.NormalTheme" android:resource="@style/NormalTheme" />
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN"/>
-                          <category android:name="android.intent.category.LAUNCHER"/>
-                      </intent-filter>
-                  </activity>
-                  <meta-data android:name="flutterEmbedding" android:value="2" />
-              </application>
-          </manifest>
-          EOF
-
-          # 6. Gradle 설정 (Release 모드 고정)
-          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
-          sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
-          flutter pub get
-
-      - name: AAB 빌드
-        run: flutter build appbundle --release --no-tree-shake-icons
-
-      - name: 결과물 추출
-        uses: actions/upload-artifact@v4
-        with:
-          name: BikeFit_Mobile_Fixed_AAB
-          path: build/app/outputs/bundle/release/app-release.aab
+          package com
