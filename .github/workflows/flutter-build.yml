@@ -15,17 +15,25 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Flutter (Force Stable)
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
 
-      - name: Emergency Patch for V1 Embedding
+      - name: Force V2 Embedding Patch (Total Rewrite)
         run: |
-          # AndroidManifest.xml에 v2 임베딩 설정을 강제로 주입하여 에러 차단
+          # 1. AndroidManifest.xml 강제 수정
           find . -name "AndroidManifest.xml" -exec sed -i '/<application/a \        <meta-data android:name="flutterEmbedding" android:value="2" />' {} +
-          echo "V1 Embedding Patch Applied."
+          
+          # 2. MainActivity 파일을 V2 방식으로 아예 새로 작성 (핵심 해결책)
+          cat <<EOF > android/app/src/main/kotlin/com/example/indoor_fit_app/MainActivity.kt
+          package com.example.indoor_fit_app
+          import io.flutter.embedding.android.FlutterActivity
+          class MainActivity: FlutterActivity() { }
+          EOF
+          
+          echo "V2 Transformation Complete."
 
       - name: Project Initialization
         run: |
@@ -40,17 +48,16 @@ jobs:
           -alias my-key-alias -storepass Sodomaki79 \
           -keypass Sodomaki79 -dname "CN=BikeFit, OU=Dev, O=MyCompany, L=Seoul, S=Seoul, C=KR"
 
-      - name: Build AAB (The Last Stand)
+      - name: Build AAB (The Victory Run)
         run: |
-          # 모든 체크를 우회하고 빌드 실행
+          # 모든 체크를 뚫고 최종 번들 생성
           flutter build appbundle --release \
           --build-number=${{ github.run_number }} \
-          --no-tree-shake-icons \
-          --no-pub
+          --no-tree-shake-icons
 
       - name: Sign AAB Directly
         run: |
-          # 생성된 AAB에 Sodomaki79 비밀번호로 새 도장을 찍음
+          # Sodomaki79 도장을 수동으로 확실히 찍음
           jarsigner -keystore release.jks \
           -storepass Sodomaki79 -keypass Sodomaki79 \
           build/app/outputs/bundle/release/app-release.aab my-key-alias
@@ -58,5 +65,5 @@ jobs:
       - name: Upload New AAB
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Final_AAB_Fixed_Final_V12
+          name: BikeFit_Final_AAB_Success_V20
           path: build/app/outputs/bundle/release/app-release.aab
