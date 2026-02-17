@@ -5,7 +5,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -15,38 +14,92 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 의존성 설치
-        run: flutter pub get
-
-      - name: key.properties 확인
+      - name: 사용자 매니페스트 및 MainActivity 정밀 주입
         run: |
-          if [ ! -f "android/key.properties" ]; then
-            echo "storePassword=Sodomaki79" > android/key.properties
-            echo "keyPassword=Sodomaki79" >> android/key.properties
-            echo "keyAlias=my-key-alias" >> android/key.properties
-            echo "storeFile=release.jks" >> android/key.properties
-          fi
+          # 1. 키 파일 백업
+          cp android/app/release.jks ./release.jks_backup || { echo "❌ 키 파일 없음!"; exit 1; }
+          
+          # 2. 안드로이드 폴더 초기화 및 생성
+          rm -rf android
+          flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
+          
+          # 3. 진짜 키 파일 및 서명 설정 복구
+          mkdir -p android/app
+          mv ./release.jks_backup android/app/release.jks
+          cat <<EOF > android/key.properties
+          storePassword=Sodomaki79
+          keyPassword=Sodomaki79
+          keyAlias=my-key-alias
+          storeFile=release.jks
+          EOF
 
-      - name: 키 파일 확인
-        run: |
-          if [ ! -f "android/app/release.jks" ]; then
-            echo "❌ release.jks 파일이 없습니다. 업로드 키를 android/app 폴더에 추가하세요."
-            exit 1
-          fi
-          echo "✅ 키 파일 존재 확인 완료"
+          # 4. MainActivity.kt 재작성 (패키지 경로 고정)
+          mkdir -p android/app/src/main/kotlin/com/overthebike/over_the_bike_fit
+          cat <<EOF > android/app/src/main/kotlin/com/overthebike/over_the_bike_fit/MainActivity.kt
+          package com.overthebike.over_the_bike_fit
+          import io.flutter.embedding.android.FlutterActivity
+          class MainActivity: FlutterActivity() {
+          }
+          EOF
 
-      - name: AAB 빌드 (Play 서명키와 동일한 업로드 키로 서명)
+          # 5. 사용자님이 주신 AndroidManifest.xml 내용 그대로 주입
+          cat <<EOF > android/app/src/main/AndroidManifest.xml
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.overthebike.over_the_bike_fit">
+              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+              <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+
+              <application
+                  android:label="Indoor_fit_app" 
+                  android:name="\${applicationName}"
+                  android:icon="@mipmap/ic_launcher"
+                  android:allowBackup="false">
+                  
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:launchMode="singleTop"
+                      android:theme="@style/LaunchTheme"
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+                      android:hardwareAccelerated="true"
+                      android:windowSoftInputMode="adjustResize">
+                      
+                      <meta-data
+                          android:name="io.flutter.embedding.android.NormalTheme"
+                          android:resource="@style/NormalTheme" />
+
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+
+                  <meta-data
+                      android:name="flutterEmbedding"
+                      android:value="2" />
+              </application>
+          </manifest>
+          EOF
+
+          # 6. 빌드 설정(Gradle) 마무리
+          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
+          sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
+          
+          flutter pub get
+
+      - name: AAB 빌드 시작
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 결과물 업로드
+      - name: 최종 결과물 저장
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Final_Verification
+          name: BikeFit_Manifest_Fixed_AAB
           path: build/app/outputs/bundle/release/app-release.aab
