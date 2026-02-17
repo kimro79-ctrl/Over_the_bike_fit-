@@ -18,16 +18,13 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 환경 재생성 및 리소스 생성 (성공했던 로직)
+      - name: 환경 재생성 (성공 로직)
         run: |
-          # 1. 안드로이드 폴더 초기화 (에러 원천 차단)
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
-          
-          # 2. 패키지 및 리소스 준비
           flutter pub get
           
-          # 3. AndroidManifest.xml에 구글용 설정 주입
+          # AndroidManifest 설정
           cat <<EOF > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.overthebike.over_the_bike_fit">
               <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
@@ -44,30 +41,28 @@ jobs:
               </application>
           </manifest>
           EOF
-
-          # 4. dexBuilder 에러 방지
           sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
 
-      - name: Create New Keystore for Google
+      - name: Create Keystore
         run: |
-          # 구글이 기다리는 새 지문(8B:A6:9F) 생성
           keytool -genkey -v -keystore release.jks \
           -keyalg RSA -keysize 2048 -validity 10000 \
           -alias my-key-alias -storepass Sodomaki79 \
           -keypass Sodomaki79 -dname "CN=BikeFit, OU=Dev, O=MyCompany, L=Seoul, S=Seoul, C=KR"
 
-      - name: AAB 빌드 (구글 제출용)
+      - name: Build Unsigned AAB
+        # --no-signing 옵션을 추가해 중복 서명을 방지합니다.
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: AAB 서명 날인 (Sodomaki79)
+      - name: Sign AAB with Single Certificate
         run: |
-          # 빌드된 파일에 새 도장을 찍어야 구글이 받아줍니다.
+          # 빌드된 순수한 파일에 Sodomaki79 도장 하나만 찍습니다.
           jarsigner -keystore release.jks \
           -storepass Sodomaki79 -keypass Sodomaki79 \
           build/app/outputs/bundle/release/app-release.aab my-key-alias
 
-      - name: AAB 파일 추출
+      - name: Upload Final AAB
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Google_Success_V3
+          name: BikeFit_Single_Sign_Success
           path: build/app/outputs/bundle/release/app-release.aab
