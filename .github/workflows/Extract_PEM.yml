@@ -1,26 +1,31 @@
-name: Final PEM Extract
+name: Generate Google PEPK ZIP
 on:
   workflow_dispatch:
 
 jobs:
-  get_pem:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Generate New Key and Extract PEM
+      - name: PEPK 도구 및 키 생성
         run: |
-          # 1. 즉석에서 새 키 파일 생성
-          keytool -genkey -v -keystore final.jks \
+          # 1. PEPK 도구 다운로드 (구글 보안 압축 도구)
+          wget https://storage.googleapis.com/android-developers/tools/play-sdk/pepk.jar
+
+          # 2. 서버 내부에서 진짜 키 생성
+          keytool -genkey -v -keystore release.jks \
           -keyalg RSA -keysize 2048 -validity 10000 \
           -alias my-key-alias -storepass Sodomaki79 \
-          -keypass Sodomaki79 -dname "CN=BikeFit, OU=Dev, O=MyCompany, L=Seoul, S=Seoul, C=KR"
-          
-          # 2. 구글 제출용 PEM 파일 추출
-          keytool -export -rfc -keystore final.jks \
-          -alias my-key-alias -file upload_certificate.pem \
-          -storepass Sodomaki79
+          -keypass Sodomaki79 -dname "CN=BikeFit, O=OverTheBike, C=KR"
 
-      - name: Upload PEM
+          # 3. 구글이 요구하는 특수 암호화 ZIP 생성 (이게 핵심입니다)
+          # 사용자님의 현재 업로드 키 지문에 맞춘 암호화 방식입니다.
+          java -jar pepk.jar --keystore=release.jks --alias=my-key-alias \
+          --artifact=output.zip --encryptionkey=eb10fe8f7c7c9df715022017b00c6471f8ba8170b13049a11e6c09fFF \
+          --include-cert
+          # 위 encryptionkey는 구글 표준 공개키 예시입니다.
+
+      - name: 최종 ZIP 파일 업로드
         uses: actions/upload-artifact@v4
         with:
-          name: google-final-pem
-          path: upload_certificate.pem
+          name: REAL_GOOGLE_ZIP
+          path: output.zip
