@@ -22,14 +22,14 @@ jobs:
 
       - name: 프로젝트 초기화 및 서명 연결
         run: |
-          # 1. 사용자님이 올린 진짜 키 파일(release.jks) 안전하게 보관
-          cp android/app/release.jks ./release.jks_backup || true
+          # 1. 사용자님이 15일에 구글에 제출했던 '그 키'를 안전하게 백업
+          cp android/app/release.jks ./release.jks_backup || { echo "키 파일이 android/app에 없습니다!"; exit 1; }
           
-          # 2. 안드로이드 폴더 초기화 및 재생성
+          # 2. 안드로이드 폴더 초기화
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           
-          # 3. 보관했던 진짜 키 파일을 새 폴더로 이동
+          # 3. 백업한 '진짜 키'를 다시 제자리로 이동
           mkdir -p android/app
           mv ./release.jks_backup android/app/release.jks
           
@@ -41,17 +41,15 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 5. 빌드 설정 및 권한 수정
+          # 5. 빌드 설정 강제 적용
           sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
           
+          # 6. AndroidManifest 설정
           cat <<EOF > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.overthebike.over_the_bike_fit">
-              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
               <application android:label="Indoor_fit_app" android:icon="@mipmap/ic_launcher">
-                  <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:theme="@style/LaunchTheme">
+                  <activity android:name=".MainActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN"/>
                           <category android:name="android.intent.category.LAUNCHER"/>
@@ -64,11 +62,11 @@ jobs:
           
           flutter pub get
 
-      - name: 빌드 및 배포 파일 생성
+      - name: AAB 빌드
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 최종 결과물 저장
+      - name: 최종 결과물 추출
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Final_Success
+          name: BikeFit_Final_Ready_To_Store
           path: build/app/outputs/bundle/release/app-release.aab
