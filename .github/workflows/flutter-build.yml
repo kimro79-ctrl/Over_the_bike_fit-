@@ -12,14 +12,12 @@ jobs:
       - name: Setup Java & Flutter
         uses: subosito/flutter-action@v2
         with:
-          # 버전을 3.27.0으로 올려서 SDK 버전 에러 해결
-          flutter-version: '3.27.0'
+          # 특정 버전 대신 최신 안정 버전을 사용하도록 설정
           channel: 'stable'
 
       - name: Project Initialization
         run: |
           flutter pub get
-          # 버전 충돌 방지를 위해 강제 업데이트
           flutter pub upgrade
 
       - name: Create New Keystore for Google
@@ -38,7 +36,7 @@ jobs:
 
       - name: Sign AAB Directly
         run: |
-          # 빌드된 파일에 Sodomaki79 도장을 확실하게 찍음
+          # 빌드된 파일에 Sodomaki79 도장을 강제로 찍음
           jarsigner -keystore release.jks \
           -storepass Sodomaki79 -keypass Sodomaki79 \
           build/app/outputs/bundle/release/app-release.aab my-key-alias
@@ -46,5 +44,5 @@ jobs:
       - name: Upload New AAB
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Final_AAB_Fixed_v3
+          name: BikeFit_Final_AAB_Fixed_Final
           path: build/app/outputs/bundle/release/app-release.aab
