@@ -6,64 +6,68 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Setup Java & Flutter
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.27.1'
           channel: 'stable'
-          cache: true
 
-      - name: Force V2 Embedding Patch (Total Rewrite)
+      - name: 환경 재생성 및 리소스 생성 (성공했던 로직)
         run: |
-          # 1. AndroidManifest.xml 강제 수정
-          find . -name "AndroidManifest.xml" -exec sed -i '/<application/a \        <meta-data android:name="flutterEmbedding" android:value="2" />' {} +
+          # 1. 안드로이드 폴더 초기화 (에러 원천 차단)
+          rm -rf android
+          flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           
-          # 2. MainActivity 파일을 V2 방식으로 아예 새로 작성 (핵심 해결책)
-          cat <<EOF > android/app/src/main/kotlin/com/example/indoor_fit_app/MainActivity.kt
-          package com.example.indoor_fit_app
-          import io.flutter.embedding.android.FlutterActivity
-          class MainActivity: FlutterActivity() { }
-          EOF
-          
-          echo "V2 Transformation Complete."
-
-      - name: Project Initialization
-        run: |
-          flutter clean
+          # 2. 패키지 및 리소스 준비
           flutter pub get
+          
+          # 3. AndroidManifest.xml에 구글용 설정 주입
+          cat <<EOF > android/app/src/main/AndroidManifest.xml
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.overthebike.over_the_bike_fit">
+              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <application android:label="Indoor_fit_app" android:icon="@mipmap/ic_launcher">
+                  <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:theme="@style/LaunchTheme">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+                  <meta-data android:name="flutterEmbedding" android:value="2" />
+              </application>
+          </manifest>
+          EOF
+
+          # 4. dexBuilder 에러 방지
+          sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
 
       - name: Create New Keystore for Google
         run: |
-          # 구글 승인 지문(8B:A6:9F)용 키 생성
+          # 구글이 기다리는 새 지문(8B:A6:9F) 생성
           keytool -genkey -v -keystore release.jks \
           -keyalg RSA -keysize 2048 -validity 10000 \
           -alias my-key-alias -storepass Sodomaki79 \
           -keypass Sodomaki79 -dname "CN=BikeFit, OU=Dev, O=MyCompany, L=Seoul, S=Seoul, C=KR"
 
-      - name: Build AAB (The Victory Run)
-        run: |
-          # 모든 체크를 뚫고 최종 번들 생성
-          flutter build appbundle --release \
-          --build-number=${{ github.run_number }} \
-          --no-tree-shake-icons
+      - name: AAB 빌드 (구글 제출용)
+        run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: Sign AAB Directly
+      - name: AAB 서명 날인 (Sodomaki79)
         run: |
-          # Sodomaki79 도장을 수동으로 확실히 찍음
+          # 빌드된 파일에 새 도장을 찍어야 구글이 받아줍니다.
           jarsigner -keystore release.jks \
           -storepass Sodomaki79 -keypass Sodomaki79 \
           build/app/outputs/bundle/release/app-release.aab my-key-alias
 
-      - name: Upload New AAB
+      - name: AAB 파일 추출
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Final_AAB_Success_V20
+          name: BikeFit_Google_Success_V3
           path: build/app/outputs/bundle/release/app-release.aab
