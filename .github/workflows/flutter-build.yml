@@ -12,14 +12,16 @@ jobs:
       - name: Setup Java & Flutter
         uses: subosito/flutter-action@v2
         with:
-          # Dart 3.6.0 이상을 포함하는 안정적인 최신 버전 사용
-          flutter-version: '3.24.5'
+          # Dart 3.6.0 이상을 포함하는 최신 버전으로 확실히 고정
+          flutter-version: '3.29.0'
           channel: 'stable'
 
       - name: Project Initialization
         run: |
-          # SDK 버전 요구사항을 강제로 맞추기 위한 명령어
+          # 캐시 문제를 방지하고 종속성을 최신으로 강제 업데이트
+          flutter pub pubspec-clean
           flutter pub get
+          flutter pub upgrade
 
       - name: Create New Keystore for Google
         run: |
@@ -31,14 +33,14 @@ jobs:
 
       - name: Build AAB
         run: |
-          # v1 embedding 이슈가 발생하지 않도록 설정하며 빌드
+          # 최신 빌드 환경에서 번들 생성
           flutter build appbundle --release \
           --build-number=${{ github.run_number }} \
           --no-tree-shake-icons
 
       - name: Sign AAB Directly
         run: |
-          # Sodomaki79 도장을 수동으로 한 번 더 확실하게 찍음
+          # 생성된 AAB에 Sodomaki79 비밀번호로 새 도장을 찍음
           jarsigner -keystore release.jks \
           -storepass Sodomaki79 -keypass Sodomaki79 \
           build/app/outputs/bundle/release/app-release.aab my-key-alias
@@ -46,5 +48,5 @@ jobs:
       - name: Upload New AAB
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Final_AAB_Fixed_v5
+          name: BikeFit_Final_AAB_Ultimate
           path: build/app/outputs/bundle/release/app-release.aab
