@@ -20,20 +20,20 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: [모바일 전용] 자동 키 생성 및 프로젝트 환경 설정
+      - name: [모바일 최적화] 자동 키 생성 및 프로젝트 재구성
         run: |
-          # 1. 안드로이드 폴더 초기화
+          # 1. 안드로이드 폴더 완전 초기화
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           
-          # 2. 빌드 서버에서 직접 '진짜' JKS 키 파일 생성 (Sodomaki79 비번 고정)
+          # 2. 빌드 서버에서 고정된 정보로 '진짜' JKS 생성
           mkdir -p android/app
           keytool -genkey -v -keystore android/app/release.jks \
           -keyalg RSA -keysize 2048 -validity 10000 \
           -alias my-key-alias -storepass Sodomaki79 \
           -keypass Sodomaki79 -dname "CN=BikeFit, O=OverTheBike, C=KR"
 
-          # 3. 생성된 진짜 키를 빌드 엔진에 연결
+          # 3. 서명 정보 고정 연결
           cat <<EOF > android/key.properties
           storePassword=Sodomaki79
           keyPassword=Sodomaki79
@@ -41,7 +41,7 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 4. MainActivity.kt 재작성 (사용자님 제안 반영)
+          # 4. MainActivity.kt 경로 및 소스 강제 생성
           mkdir -p android/app/src/main/kotlin/com/overthebike/over_the_bike_fit
           cat <<EOF > android/app/src/main/kotlin/com/overthebike/over_the_bike_fit/MainActivity.kt
           package com.overthebike.over_the_bike_fit
@@ -50,7 +50,7 @@ jobs:
           }
           EOF
 
-          # 5. 사용자 AndroidManifest.xml 주입
+          # 5. 사용자님이 주신 AndroidManifest.xml 100% 반영
           cat <<'EOF' > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.overthebike.over_the_bike_fit">
               <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
@@ -82,16 +82,16 @@ jobs:
           </manifest>
           EOF
 
-          # 6. 빌드 설정 마무리
+          # 6. Gradle 설정 (Release 모드 고정)
           sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
           flutter pub get
 
-      - name: AAB 빌드 시작
+      - name: AAB 빌드
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 최종 결과물 추출 (AAB 파일)
+      - name: 결과물 추출
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Auto_Key_AAB
+          name: BikeFit_Mobile_Fixed_AAB
           path: build/app/outputs/bundle/release/app-release.aab
