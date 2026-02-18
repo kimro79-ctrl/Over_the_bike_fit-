@@ -1,24 +1,25 @@
-name: Real Final New Key
+name: Brand New Key For Google
 on:
   workflow_dispatch:
 jobs:
   get_pem:
     runs-on: ubuntu-latest
     steps:
-      - name: Generate Brand New Key
+      - name: Generate New Key
         run: |
-          # 1. 완전히 새로운 이름으로 키 생성 (중복 회피)
-          keytool -genkey -v -keystore final_real.jks \
+          # 1. 정보를 살짝 바꿔서 완전히 새로운 키 생성 (중복 회피)
+          # 비밀번호를 Sodomaki80으로 변경했습니다.
+          keytool -genkey -v -keystore final_retry.jks \
           -keyalg RSA -keysize 2048 -validity 10000 \
-          -alias real-alias -storepass Sodomaki80 \
-          -keypass Sodomaki80 -dname "CN=BikeFitNew, O=OverTheBike, C=KR"
+          -alias final-alias -storepass Sodomaki80 \
+          -keypass Sodomaki80 -dname "CN=BikeFitFinal, O=OverTheBike, C=KR"
 
           # 2. 구글 제출용 PEM 파일 추출
-          keytool -export -rfc -keystore final_real.jks \
-          -alias real-alias -file new_upload_cert.pem \
+          keytool -export -rfc -keystore final_retry.jks \
+          -alias final-alias -file final_upload_cert.pem \
           -storepass Sodomaki80
-      - name: Upload New PEM
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: google-new-pem
-          path: new_upload_cert.pem
+          name: google-final-pem
+          path: final_upload_cert.pem
