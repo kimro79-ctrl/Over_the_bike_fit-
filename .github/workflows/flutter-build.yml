@@ -27,18 +27,18 @@ jobs:
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           
-          # 2. 서버 내부에서 진짜 JKS 파일 생성 (삭제된 파일을 대신함)
+          # 2. 구글에 방금 제출한 것과 동일한 정보로 JKS 생성 (Sodomaki80)
           mkdir -p android/app
           keytool -genkey -v -keystore android/app/release.jks \
           -keyalg RSA -keysize 2048 -validity 10000 \
-          -alias my-key-alias -storepass Sodomaki79 \
-          -keypass Sodomaki79 -dname "CN=BikeFit, O=OverTheBike, C=KR"
+          -alias final-alias -storepass Sodomaki80 \
+          -keypass Sodomaki80 -dname "CN=BikeFitFinal, O=OverTheBike, C=KR"
 
-          # 3. 서명 정보 주입
+          # 3. 서명 정보 주입 (Sodomaki80으로 일치)
           cat <<EOF > android/key.properties
-          storePassword=Sodomaki79
-          keyPassword=Sodomaki79
-          keyAlias=my-key-alias
+          storePassword=Sodomaki80
+          keyPassword=Sodomaki80
+          keyAlias=final-alias
           storeFile=release.jks
           EOF
 
@@ -50,7 +50,7 @@ jobs:
           class MainActivity: FlutterActivity() {}
           EOF
 
-          # 5. 사용자 AndroidManifest.xml 주입 (변수 처리 포함)
+          # 5. 사용자 AndroidManifest.xml 주입
           cat <<'EOF' > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.overthebike.over_the_bike_fit">
               <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
