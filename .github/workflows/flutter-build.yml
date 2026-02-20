@@ -1,10 +1,12 @@
 name: BikeFit Absolute Match Build
+
 on:
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -14,81 +16,43 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 구글 서버 정보와 100% 동기화된 키 생성
+      # ✅ 1. 기존 업로드 키 복원 (PEM에 대응하는 keystore)
+      - name: Restore release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          # 1. 프로젝트 초기화
-          rm -rf android
-          flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
-          
-          # 2. 구글에 제출된 PEM 파일(1000012785.jpg 요구사항)과 동일한 정보 주입
-          # dname의 모든 항목을 PEM 파일의 실제 데이터와 일치시켰습니다.
           mkdir -p android/app
-          keytool -genkey -v -keystore android/app/release.jks \
-          -keyalg RSA -keysize 2048 -validity 10000 \
-          -alias final-alias -storepass Sodomaki80 \
-          -keypass Sodomaki80 \
-          -dname "CN=BikeFit, OU=Dev, O=MyCompany, L=Seoul, ST=Seoul, C=KR"
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.jks
 
-          # 3. 서명 설정 고정
           cat <<EOF > android/key.properties
-          storePassword=Sodomaki80
-          keyPassword=Sodomaki80
-          keyAlias=final-alias
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
           storeFile=release.jks
           EOF
 
-          # 4. 소스 코드 및 매니페스트 재생성
-          mkdir -p android/app/src/main/kotlin/com/overthebike/over_the_bike_fit
-          cat <<EOF > android/app/src/main/kotlin/com/overthebike/over_the_bike_fit/MainActivity.kt
-          package com.overthebike.over_the_bike_fit
-          import io.flutter.embedding.android.FlutterActivity
-          class MainActivity: FlutterActivity() {}
-          EOF
-
-          cat <<'EOF' > android/app/src/main/AndroidManifest.xml
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.overthebike.over_the_bike_fit">
-              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-              <application
-                  android:label="Indoor_fit_app" 
-                  android:name="${applicationName}"
-                  android:icon="@mipmap/ic_launcher">
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true"
-                      android:launchMode="singleTop"
-                      android:theme="@style/LaunchTheme"
-                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-                      android:hardwareAccelerated="true"
-                      android:windowSoftInputMode="adjustResize">
-                      <meta-data android:name="io.flutter.embedding.android.NormalTheme" android:resource="@style/NormalTheme" />
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN"/>
-                          <category android:name="android.intent.category.LAUNCHER"/>
-                      </intent-filter>
-                  </activity>
-                  <meta-data android:name="flutterEmbedding" android:value="2" />
-              </application>
-          </manifest>
-          EOF
-
-          # 5. 빌드 환경 연결
-          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
-          sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
+      # ✅ 2. 안드로이드 프로젝트 정비
+      - name: Configure Android project
+        run: |
+          # 매번 새 android 생성은 불필요하므로 제거함
+          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle || true
+          sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle || true
+          flutter clean
           flutter pub get
 
-      - name: AAB 빌드
+      # ✅ 3. 릴리즈 빌드 (Google Play 업로드용)
+      - name: Build AAB for Play Console
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 최종 결과물 업로드
+      # ✅ 4. 빌드 결과물 업로드
+      - name: Upload final artifact
         uses: actions/upload-artifact@v4
         with:
           name: BikeFit_Final_AAB
