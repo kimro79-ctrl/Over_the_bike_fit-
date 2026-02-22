@@ -1,4 +1,4 @@
-name: BikeFit Final Success Build
+name: BikeFit Simple Build
 on:
   workflow_dispatch:
 
@@ -21,25 +21,17 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 사용자 JKS 강제 배치 및 환경 설정
+      - name: 내 JKS 키로 빌드 설정
         run: |
-          # 1. 안드로이드 구조 강제 생성
+          # 1. 안드로이드 설정 초기화
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           
-          # 2. [핵심] 사용자님이 업로드한 release.jks를 찾아서 빌드 위치로 복사
+          # 2. 사용자님이 올린 release.jks 파일을 빌드 위치로 강제 복사
           mkdir -p android/app
-          # 저장소 전체에서 release.jks를 찾아 android/app으로 복사합니다.
           find . -name "release.jks" -exec cp {} android/app/release.jks \;
           
-          # 파일이 제대로 복사되었는지 확인 (없으면 여기서 멈춤)
-          if [ ! -f "android/app/release.jks" ]; then
-            echo "❌ 에러: 저장소에서 release.jks 파일을 찾을 수 없습니다!"
-            echo "해결책: GitHub 저장소 최상단에 release.jks 파일을 업로드(Push) 하세요."
-            exit 1
-          fi
-
-          # 3. 서명 정보 주입
+          # 3. 서명 정보 연결 (사용자님 키 정보 그대로)
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -47,17 +39,19 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 4. 빌드 설정 파일 수정
-          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
-          sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
+          # 4. 빌드 설정 강제 적용
+          if [ -f "android/app/build.gradle" ]; then
+            sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
+            sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
+          fi
           
           flutter pub get
 
       - name: AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: ★성공한 AAB 다운로드★
+      - name: ★결과물 다운로드★
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_FINAL_SUCCESS_AAB
+          name: BikeFit_Final_AAB
           path: build/app/outputs/bundle/release/app-release.aab
