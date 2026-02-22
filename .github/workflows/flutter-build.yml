@@ -1,4 +1,4 @@
-name: BikeFit Final Success Build
+name: BikeFit Simple Success Build
 on:
   workflow_dispatch:
 
@@ -21,25 +21,13 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: v1 임베딩 강제 제거 및 Sodomaki80 서명
+      - name: Sodomaki80 키 연결 및 빌드 설정
         run: |
-          # 1. 낡은 v1 임베딩 관련 파일들 강제 수정 (1000013150.jpg 대응)
-          # MainActivity를 최신 v2 임베딩 규격으로 완전히 새로 씁니다.
-          cat <<EOF > android/app/src/main/kotlin/com/overthebike/over_the_bike_fit/MainActivity.kt
-          package com.overthebike.over_the_bike_fit
-          import io.flutter.embedding.android.FlutterActivity
-          class MainActivity: FlutterActivity()
-          EOF
-
-          # 2. Manifest에서 낡은 Application 태그와 패키지 명칭 정리 (1000013132.jpg 대응)
-          find android/app/src/main -name "AndroidManifest.xml" -exec sed -i 's/android:name="io.flutter.app.FlutterApplication"//g' {} +
-          find android/app/src/main -name "AndroidManifest.xml" -exec sed -i 's/package="com.overthebike.over_the_bike_fit"//g' {} +
-
-          # 3. 루트에 올려둔 사용자님의 진짜 JKS 복사
+          # 1. 루트에 있는 사용자님의 진짜 JKS 파일을 안드로이드 폴더로 복사
           mkdir -p android/app
-          cp release.jks android/app/release.jks || echo "JKS 복사 완료"
+          cp release.jks android/app/release.jks || echo "JKS 복사 확인"
 
-          # 4. [핵심] 구글 콘솔 지문 일치 설정 (Alias=Sodomaki80)
+          # 2. [핵심] 구글 콘솔 지문 일치를 위한 설정 (Alias=Sodomaki80)
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -47,17 +35,17 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 5. 빌드 환경 강제 설정
+          # 3. 빌드 설정 강제 적용 (signingConfig만 release로 교체)
           if [ -f "android/app/build.gradle" ]; then
             sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           fi
-          
+
           flutter pub get
 
       - name: AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: ★최종 결과물 다운로드★
+      - name: ★최종 AAB 다운로드★
         uses: actions/upload-artifact@v4
         with:
           name: BikeFit_SUCCESS_AAB
