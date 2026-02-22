@@ -21,20 +21,19 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 안드로이드 설정 및 내 JKS 연결
+      - name: 안드로이드 최신화 및 매니페스트 오류 수정
         run: |
-          # 1. 안드로이드 구조 최신화 (초기화 대신 업데이트)
-          flutter create . --platforms android
+          # 1. 안드로이드 구조 최신 규격으로 업데이트
+          flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           
-          # 2. [중요] AndroidManifest.xml 패키지 오류 방지 (1000013132.jpg 해결)
+          # 2. [오류 해결] AndroidManifest.xml의 중복 패키지 속성 제거 (1000013132.jpg 대응)
           find android/app/src/main -name "AndroidManifest.xml" -exec sed -i 's/package="com.overthebike.over_the_bike_fit"//g' {} +
-          
-          # 3. 사용자님이 올린 진짜 키(release.jks)를 빌드 폴더로 복사
-          # (절대 새로 생성하지 않습니다!)
-          mkdir -p android/app
-          cp release.jks android/app/release.jks || echo "⚠️ release.jks 파일이 루트에 없습니다!"
 
-          # 4. 서명 정보 연결 (사용자님 키 정보)
+          # 3. 루트에 올려둔 사용자님의 진짜 release.jks 복사
+          mkdir -p android/app
+          cp release.jks android/app/release.jks || echo "⚠️ release.jks 복사 확인 필요"
+
+          # 4. 서명 정보 연결
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -42,10 +41,11 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 5. 빌드 환경 설정
+          # 5. 빌드 환경 강제 설정
           if [ -f "android/app/build.gradle" ]; then
             sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           fi
+          
           flutter pub get
 
       - name: AAB 빌드 실행
