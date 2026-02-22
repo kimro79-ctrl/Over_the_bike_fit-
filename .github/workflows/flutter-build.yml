@@ -14,27 +14,23 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 안드로이드 설정 및 JKS 서명 연결 (V2 embedding 변환 포함)
+      - name: 안드로이드 V2 구조로 갱신 및 JKS 연결
         run: |
-          echo "📱 Android V2 embedding 구조 최신화 중..."
-          # 기존 안드로이드 프로젝트를 덮어쓰지 않고 v2 embedding으로 강제 업데이트
+          echo "📱 Android V2 embedding 최신화 중..."
           flutter create . --platforms android --overwrite
-
-          echo "🧩 Manifest 패키지 중복 제거"
-          find android/app/src/main -name "AndroidManifest.xml" -exec sed -i 's/package="com.overthebike.over_the_bike_fit"//g' {} +
 
           echo "🔑 release.jks 복사"
           mkdir -p android/app
           cp release.jks android/app/release.jks || echo "⚠️ 루트에 release.jks가 없습니다!"
 
-          echo "🔐 key.properties 생성"
+          echo "🧩 key.properties 생성"
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -43,19 +39,19 @@ jobs:
           EOF
 
           echo "🛠 build.gradle 수정"
-          if [ -f "android/app/build.gradle" ]; then
-            sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
-          fi
+          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle || true
 
-          echo "🚫 V1 임베딩 코드 자동 교체"
-          # MainActivity.kt 경로 자동 탐색 후 import 수정
+          echo "🚫 V1 임베딩 코드 자동 정리"
+          # MainActivity.kt import 수정
           MAIN_ACTIVITY=$(find android/app/src/main -name "MainActivity.kt" | head -n 1)
           if [ -f "$MAIN_ACTIVITY" ]; then
             sed -i 's/import io.flutter.app.FlutterActivity/import io.flutter.embedding.android.FlutterActivity/g' "$MAIN_ACTIVITY"
             sed -i '/GeneratedPluginRegistrant/d' "$MAIN_ACTIVITY"
           fi
 
-          # Gradle 호환성 옵션
+          # Manifest 수정
+          find android/app/src/main -name "AndroidManifest.xml" -exec sed -i 's/android:name="io.flutter.app.FlutterApplication"//g' {} +
+
           echo "android.useAndroidX=true" >> android/gradle.properties
           echo "android.enableJetifier=true" >> android/gradle.properties
 
