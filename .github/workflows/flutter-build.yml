@@ -5,10 +5,13 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
+      # 1️⃣ 코드 체크아웃
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2️⃣ Java & Flutter 환경 설정
       - name: Setup Java & Flutter
         uses: actions/setup-java@v4
         with:
@@ -21,16 +24,17 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: fresh-upload-key 별칭 적용 및 서명
+      # 3️⃣ 안드로이드 환경 및 JKS 복호화
+      - name: 안드로이드 V2 구조 최신화 및 서명 연결
         run: |
-          # 1. 안드로이드 구조 최신화 (V1 임베딩 에러 방지)
+          echo "📱 Android V2 embedding 최신화 중..."
           flutter create . --platforms android --overwrite
 
-          # 2. release.jks 복사
+          echo "🔐 release.jks 복호화 (Secrets에서 불러오기)"
           mkdir -p android/app
-          cp release.jks android/app/release.jks
+          echo "$RELEASE_JKS_BASE64" | base64 --decode > android/app/release.jks
 
-          # 3. [핵심] 분석된 진짜 별칭 입력
+          echo "🧩 key.properties 생성 (alias=fresh-upload-key)"
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -38,17 +42,32 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 4. build.gradle 서명 강제 연결
-          if [ -f "android/app/build.gradle" ]; then
-            sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
+          echo "🛠 build.gradle 수정 (release 서명 강제)"
+          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle || true
+
+          echo "🚫 V1 임베딩 코드 자동 정리"
+          MAIN_ACTIVITY=$(find android/app/src/main -name "MainActivity.kt" | head -n 1)
+          if [ -f "$MAIN_ACTIVITY" ]; then
+            sed -i 's/import io.flutter.app.FlutterActivity/import io.flutter.embedding.android.FlutterActivity/g' "$MAIN_ACTIVITY"
+            sed -i '/GeneratedPluginRegistrant/d' "$MAIN_ACTIVITY"
           fi
+          find android/app/src/main -name "AndroidManifest.xml" -exec sed -i 's/android:name="io.flutter.app.FlutterApplication"//g' {} +
 
+          echo "⚙️ AndroidX 옵션 적용"
+          echo "android.useAndroidX=true" >> android/gradle.properties
+          echo "android.enableJetifier=true" >> android/gradle.properties
+
+          flutter clean
           flutter pub get
+        env:
+          RELEASE_JKS_BASE64: ${{ secrets.RELEASE_JKS_BASE64 }}
 
+      # 4️⃣ AAB 빌드 실행
       - name: AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: ★이 파일을 구글 콘솔에 올리세요★
+      # 5️⃣ 결과물 업로드
+      - name: ★최종 결과물 다운로드★
         uses: actions/upload-artifact@v4
         with:
           name: BikeFit_FINAL_SUCCESS
