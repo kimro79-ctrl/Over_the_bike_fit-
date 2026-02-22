@@ -1,4 +1,4 @@
-name: BikeFit Real Final Success
+name: BikeFit Google Console Upload
 on:
   workflow_dispatch:
 
@@ -21,17 +21,16 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔐 진짜 별칭(fresh-upload-key) 강제 연결
+      - name: 🔐 fresh-upload-key 별칭으로 서명 고정
         run: |
-          # 1. 낡은 V1 에러 방지를 위해 안드로이드 구조 갱신
+          # 1. 낡은 V1 에러 방지를 위해 안드로이드 설정 갱신
           flutter create . --platforms android --overwrite
 
-          # 2. 저장소 루트의 release.jks 복사
+          # 2. 저장소 루트의 release.jks를 앱 폴더로 복사
           mkdir -p android/app
           cp release.jks android/app/release.jks
 
-          # 3. [분석 결과 반영] 진짜 별칭 입력
-          # 이 이름(fresh-upload-key)이어야 구글의 75:CD:32 지문이 찍힙니다.
+          # 3. [핵심] 별칭 오타 수정: fresh-upload-key (하이픈 확인)
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -39,7 +38,7 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 4. 서명 설정 강제 적용
+          # 4. 빌드 서버가 임의의 키를 생성하지 못하도록 release 서명 강제 적용
           if [ -f "android/app/build.gradle" ]; then
             sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           fi
@@ -49,8 +48,8 @@ jobs:
       - name: AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: ★최종 결과물 다운로드★
+      - name: ★이 파일을 다운로드하여 구글에 올리세요★
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_FINAL_SUCCESS
+          name: BikeFit_FINAL_FOR_CONSOLE
           path: build/app/outputs/bundle/release/app-release.aab
