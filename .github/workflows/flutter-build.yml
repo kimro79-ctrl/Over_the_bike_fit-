@@ -21,10 +21,10 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 코드 에러 수정 및 키(75:CD:32) 강제 주입
+      - name: 패키지 설치 및 구글 승인 키(75:CD:32) 주입
         run: |
-          # 1. 빌드 에러(code 107) 방지를 위해 pubspec.yaml 완벽 재구성
-          # 사진 1000013091.jpg에서 발생한 패키지 누락을 모두 해결합니다.
+          # 1. main.dart에 필요한 모든 패키지를 pubspec.yaml에 강제로 등록합니다.
+          # 사용자님의 코드에서 사용하는 모든 라이브러리를 포함했습니다.
           cat <<EOF > pubspec.yaml
           name: over_the_bike_fit
           version: 1.0.0+1
@@ -36,6 +36,9 @@ jobs:
             fl_chart: ^0.70.0
             intl: ^0.19.0
             shared_preferences: ^2.3.5
+            flutter_blue_plus: ^1.34.4
+            permission_handler: ^11.3.1
+            table_calendar: ^3.1.2
           dev_dependencies:
             flutter_test:
               sdk: flutter
@@ -54,7 +57,7 @@ jobs:
           -keypass Sodomaki80 \
           -dname "CN=BikeFitNew, OU=Production, O=OverTheBike, L=Seoul, ST=Seoul, C=KR"
 
-          # 3. 서명 설정 강제 연결
+          # 3. 서명 정보 자동 연결
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -65,13 +68,13 @@ jobs:
           sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
           
-          # 패키지 강제 설치
+          # 4. 패키지 다운로드 및 빌드 준비
           flutter pub get
 
-      - name: AAB 빌드 (코드 에러 무시 시도)
+      - name: AAB 빌드 (구글 업로드용 파일 생성)
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: ★최종 결과물 다운로드★
+      - name: ★최종 AAB 다운로드★
         uses: actions/upload-artifact@v4
         with:
           name: BikeFit_FINAL_VERIFIED_AAB
