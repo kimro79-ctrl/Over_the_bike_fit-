@@ -1,4 +1,4 @@
-name: BikeFit Google Console Upload
+name: BikeFit Google Console Final
 on:
   workflow_dispatch:
 
@@ -21,16 +21,17 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔐 fresh-upload-key 별칭으로 서명 고정
+      - name: 🔐 파일 내부 공백 별칭 강제 연결
         run: |
-          # 1. 낡은 V1 에러 방지를 위해 안드로이드 설정 갱신
+          # 1. 안드로이드 설정 강제 초기화
           flutter create . --platforms android --overwrite
 
-          # 2. 저장소 루트의 release.jks를 앱 폴더로 복사
+          # 2. 루트의 release.jks를 앱 폴더로 복사
           mkdir -p android/app
           cp release.jks android/app/release.jks
 
-          # 3. [핵심] 별칭 오타 수정: fresh-upload-key (하이픈 확인)
+          # 3. [핵심] 파일 내부 바이너리와 일치하는 공백 포함 별칭 주입
+          # 이 부분은 사용자님이 수정하지 마시고 이대로 복사하세요.
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -38,7 +39,7 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 4. 빌드 서버가 임의의 키를 생성하지 못하도록 release 서명 강제 적용
+          # 4. 빌드 서버가 딴짓 못하게 release 서명 강제 고정
           if [ -f "android/app/build.gradle" ]; then
             sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           fi
@@ -51,5 +52,5 @@ jobs:
       - name: ★이 파일을 다운로드하여 구글에 올리세요★
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_FINAL_FOR_CONSOLE
+          name: BikeFit_SUCCESS_AAB
           path: build/app/outputs/bundle/release/app-release.aab
