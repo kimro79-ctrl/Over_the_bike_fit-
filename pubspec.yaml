@@ -1,63 +1,27 @@
-name: BikeFit Final Production Build
-on:
-  workflow_dispatch:
+name: over_the_bike_fit
+description: A new Flutter project.
+publish_to: 'none'
+version: 1.0.0+1
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+environment:
+  sdk: '>=3.0.0 <4.0.0' # 1000013098.jpg의 SDK 오류 해결
 
-      - name: Setup Java & Flutter
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.27.1'
-          channel: 'stable'
+dependencies:
+  flutter:
+    sdk: flutter
+  # main.dart에서 사용하는 모든 패키지 강제 지정
+  fl_chart: ^0.70.0
+  intl: ^0.19.0
+  shared_preferences: ^2.3.5
+  flutter_blue_plus: ^1.34.4
+  permission_handler: ^11.3.1
+  table_calendar: ^3.1.2
+  cupertino_icons: ^1.0.6
 
-      - name: 구글 승인 완료된 뉴키(75:CD:32...) 강제 설정
-        run: |
-          # 1. 기존 설정 완전히 삭제하고 새로 시작
-          rm -rf android
-          flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
-          
-          mkdir -p android/app
-          
-          # 2. 구글이 승인한 75:CD:32 지문을 만드는 '진짜 도장' 생성
-          # 정보가 하나라도 틀리면 안 되므로 정확히 입력했습니다.
-          keytool -genkey -v -keystore android/app/release.jks \
-          -keyalg RSA -keysize 2048 -validity 10000 \
-          -alias fresh-upload-key -storepass Sodomaki80 \
-          -keypass Sodomaki80 \
-          -dname "CN=BikeFitNew, OU=Production, O=OverTheBike, L=Seoul, ST=Seoul, C=KR"
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
 
-          # 3. 서명 파일 정보 작성
-          cat <<EOF > android/key.properties
-          storePassword=Sodomaki80
-          keyPassword=Sodomaki80
-          keyAlias=fresh-upload-key
-          storeFile=release.jks
-          EOF
-
-          # 4. 앱 빌드 설정에 도장 연결 (signingConfig 설정)
-          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
-          
-          # 5. MultiDex 설정 추가 (빌드 에러 방지)
-          sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
-          
-          flutter pub get
-
-      - name: AAB 빌드 실행
-        run: flutter build appbundle --release --no-tree-shake-icons
-
-      - name: ★최종 AAB 파일 추출★
-        uses: actions/upload-artifact@v4
-        with:
-          name: BikeFit_FINAL_SUCCESS_AAB
-          path: build/app/outputs/bundle/release/app-release.aab
+flutter:
+  uses-material-design: true
