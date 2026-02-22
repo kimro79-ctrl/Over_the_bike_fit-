@@ -21,23 +21,20 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 안드로이드 설정 및 내 JKS 연결
+      - name: 안드로이드 설정 및 JKS 서명 연결 (V2 embedding 변환 포함)
         run: |
-          # 1. 안드로이드 구조 유지 (필요 시에만 생성)
-          if [ ! -d "android" ]; then
-            flutter create . --platforms android
-          else
-            echo "✅ 기존 안드로이드 구조 유지"
-          fi
-          
-          # 2. Manifest 패키지 중복 방지 (1000013132.jpg 문제 해결)
+          echo "📱 Android V2 embedding 구조 최신화 중..."
+          # 기존 안드로이드 프로젝트를 덮어쓰지 않고 v2 embedding으로 강제 업데이트
+          flutter create . --platforms android --overwrite
+
+          echo "🧩 Manifest 패키지 중복 제거"
           find android/app/src/main -name "AndroidManifest.xml" -exec sed -i 's/package="com.overthebike.over_the_bike_fit"//g' {} +
-          
-          # 3. 사용자님의 JKS 복사 (기존 키만 사용)
+
+          echo "🔑 release.jks 복사"
           mkdir -p android/app
           cp release.jks android/app/release.jks || echo "⚠️ 루트에 release.jks가 없습니다!"
 
-          # 4. key.properties 연결
+          echo "🔐 key.properties 생성"
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -45,12 +42,20 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 5. 빌드 서명 강제 적용
+          echo "🛠 build.gradle 수정"
           if [ -f "android/app/build.gradle" ]; then
             sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           fi
 
-          # 6. AndroidX 옵션 활성화 (호환성 확보)
+          echo "🚫 V1 임베딩 코드 자동 교체"
+          # MainActivity.kt 경로 자동 탐색 후 import 수정
+          MAIN_ACTIVITY=$(find android/app/src/main -name "MainActivity.kt" | head -n 1)
+          if [ -f "$MAIN_ACTIVITY" ]; then
+            sed -i 's/import io.flutter.app.FlutterActivity/import io.flutter.embedding.android.FlutterActivity/g' "$MAIN_ACTIVITY"
+            sed -i '/GeneratedPluginRegistrant/d' "$MAIN_ACTIVITY"
+          fi
+
+          # Gradle 호환성 옵션
           echo "android.useAndroidX=true" >> android/gradle.properties
           echo "android.enableJetifier=true" >> android/gradle.properties
 
