@@ -1,4 +1,4 @@
-name: BikeFit Google Console Final Ultimate
+name: BikeFit Google Console Final Ultimate Fixed 2026
 on:
   workflow_dispatch:
 
@@ -21,24 +21,19 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔐 완전 캐시 삭제 + 서명 강제 적용 + 로그 상세
+      - name: 🔐 서명 설정 강제 재정의 + 모든 캐시 제거
         run: |
-          # 모든 캐시 제거 (fallback 99% 차단)
           flutter clean
-          rm -rf $HOME/.gradle/caches/ $HOME/.pub-cache
-          rm -rf android/.gradle android/app/build
+          rm -rf $HOME/.gradle/caches/ $HOME/.pub-cache android/.gradle android/app/build android/app/.gradle
 
           flutter pub cache repair
           flutter pub get
 
-          # 프로젝트 재생성
           flutter create . --platforms android --overwrite
 
-          # JKS 복사 안전장치
           mkdir -p android/app
-          cp release.jks android/app/release.jks || (echo "release.jks 파일 없음! 리포지토리 루트 확인" && exit 1)
+          cp release.jks android/app/release.jks || exit 1
 
-          # key.properties 생성
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -46,24 +41,21 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # build.gradle에 release 블록 강제 추가 (존재 여부 무관)
-          sed -i '/signingConfigs {/a \        release {\n            storeFile file("release.jks")\n            storePassword "Sodomaki80"\n            keyAlias "fresh-upload-key"\n            keyPassword "Sodomaki80"\n        }' android/app/build.gradle || true
+          # 기존 signingConfigs 전체 삭제 후 새로 삽입 (fallback 완전 차단)
+          sed -i '/signingConfigs {/,/}/d' android/app/build.gradle
+          sed -i '/android {/a signingConfigs {\n    release {\n        storeFile file("release.jks")\n        storePassword "Sodomaki80"\n        keyAlias "fresh-upload-key"\n        keyPassword "Sodomaki80"\n    }\n}' android/app/build.gradle
 
-          # debug 참조 완전 제거 + release 강제
-          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
-          sed -i 's/signingConfigs.debug//g' android/app/build.gradle
-          sed -i '/buildTypes {/a \        signingConfig signingConfigs.release' android/app/build.gradle || true
+          sed -i '/buildTypes {/a \        signingConfig signingConfigs.release' android/app/build.gradle
 
-          # 설정 로그 출력
-          cat android/key.properties
-          grep -A 20 signingConfigs android/app/build.gradle
+          echo "=== 최종 signingConfigs 확인 ==="
+          grep -A 30 signingConfigs android/app/build.gradle
 
-      - name: AAB 빌드 + signing 로그 추출
+      - name: AAB 빌드 + 서명 로그 추출
         run: |
           flutter build appbundle --release --no-tree-shake-icons --verbose > build_log.txt 2>&1
-          grep -i "signing\|keystore\|alias\|fresh-upload-key\|validateSigning\|release" build_log.txt
+          grep -i "signing\|keystore\|alias\|fresh-upload-key\|validateSigning\|release" build_log.txt || echo "서명 로그 미검출"
 
-      - name: AAB 업로드
+      - name: AAB 아티팩트
         uses: actions/upload-artifact@v4
         with:
           name: BikeFit_FINAL_AAB
