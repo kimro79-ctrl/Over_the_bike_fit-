@@ -6,61 +6,72 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # 1️⃣ 코드 체크아웃
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2️⃣ Java & Flutter 환경 설정
       - name: Setup Java & Flutter
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
+          
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 안드로이드 V2 구조로 갱신 및 JKS 연결
+      # 3️⃣ 안드로이드 환경 정리 + 내 JKS 연결
+      - name: 안드로이드 V2 구조 갱신 및 서명 연결
         run: |
           echo "📱 Android V2 embedding 최신화 중..."
           flutter create . --platforms android --overwrite
+
+          echo "🧩 Manifest 중복 패키지 제거"
+          find android/app/src/main -name "AndroidManifest.xml" -exec sed -i 's/package="com.overthebike.over_the_bike_fit"//g' {} +
 
           echo "🔑 release.jks 복사"
           mkdir -p android/app
           cp release.jks android/app/release.jks || echo "⚠️ 루트에 release.jks가 없습니다!"
 
-          echo "🧩 key.properties 생성"
+          echo "🔐 key.properties 생성 (alias=upload-key)"
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
-          keyAlias=fresh-upload-key
+          keyAlias=upload-key
           storeFile=release.jks
           EOF
 
           echo "🛠 build.gradle 수정"
-          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle || true
+          if [ -f "android/app/build.gradle" ]; then
+            sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
+          fi
 
           echo "🚫 V1 임베딩 코드 자동 정리"
-          # MainActivity.kt import 수정
+          # MainActivity.kt import 자동 수정
           MAIN_ACTIVITY=$(find android/app/src/main -name "MainActivity.kt" | head -n 1)
           if [ -f "$MAIN_ACTIVITY" ]; then
             sed -i 's/import io.flutter.app.FlutterActivity/import io.flutter.embedding.android.FlutterActivity/g' "$MAIN_ACTIVITY"
             sed -i '/GeneratedPluginRegistrant/d' "$MAIN_ACTIVITY"
           fi
 
-          # Manifest 수정
+          # Manifest 내 V1 Application 선언 제거
           find android/app/src/main -name "AndroidManifest.xml" -exec sed -i 's/android:name="io.flutter.app.FlutterApplication"//g' {} +
 
+          # AndroidX 호환 옵션 추가
           echo "android.useAndroidX=true" >> android/gradle.properties
           echo "android.enableJetifier=true" >> android/gradle.properties
 
           flutter clean
           flutter pub get
 
+      # 4️⃣ 빌드 실행
       - name: AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
 
+      # 5️⃣ 결과물 업로드
       - name: ★최종 결과물 다운로드★
         uses: actions/upload-artifact@v4
         with:
