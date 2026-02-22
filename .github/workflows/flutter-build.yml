@@ -1,4 +1,4 @@
-name: BikeFit Google Console Final Success
+name: BikeFit Google Console Final Ultimate
 on:
   workflow_dispatch:
 
@@ -21,21 +21,24 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔐 임시 키 생성 원천 차단 및 서명 고정
+      - name: 🔐 완전 캐시 삭제 + 서명 강제 적용 + 로그 상세
         run: |
-          # 1. 기존 빌드 찌꺼기 및 캐시 완전 삭제
+          # 모든 캐시 제거 (fallback 99% 차단)
           flutter clean
-          rm -rf android/.gradle
-          rm -rf android/app/build.gradle.bak
+          rm -rf $HOME/.gradle/caches/ $HOME/.pub-cache
+          rm -rf android/.gradle android/app/build
 
-          # 2. 안드로이드 설정 최신화 (V1 에러 방지)
+          flutter pub cache repair
+          flutter pub get
+
+          # 프로젝트 재생성
           flutter create . --platforms android --overwrite
 
-          # 3. 사용자 JKS 파일 복사
+          # JKS 복사 안전장치
           mkdir -p android/app
-          cp release.jks android/app/release.jks || (echo "❌ JKS 파일이 루트에 없습니다!" && exit 1)
+          cp release.jks android/app/release.jks || (echo "release.jks 파일 없음! 리포지토리 루트 확인" && exit 1)
 
-          # 4. key.properties 생성 (fresh-upload-key 고정)
+          # key.properties 생성
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -43,19 +46,32 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 5. [핵심] build.gradle 수정: 디버그 서명을 아예 삭제하고 릴리스 서명만 강제
-          # 이 작업이 없으면 키를 못 찾을 때 빌드 서버가 임시 키를 멋대로 찍습니다.
-          if [ -f "android/app/build.gradle" ]; then
-            sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
-          fi
+          # build.gradle에 release 블록 강제 추가 (존재 여부 무관)
+          sed -i '/signingConfigs {/a \        release {\n            storeFile file("release.jks")\n            storePassword "Sodomaki80"\n            keyAlias "fresh-upload-key"\n            keyPassword "Sodomaki80"\n        }' android/app/build.gradle || true
 
-          flutter pub get
+          # debug 참조 완전 제거 + release 강제
+          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
+          sed -i 's/signingConfigs.debug//g' android/app/build.gradle
+          sed -i '/buildTypes {/a \        signingConfig signingConfigs.release' android/app/build.gradle || true
 
-      - name: AAB 빌드 실행 (임시 키 사용 시 실패하도록 설정)
-        run: flutter build appbundle --release --no-tree-shake-icons
+          # 설정 로그 출력
+          cat android/key.properties
+          grep -A 20 signingConfigs android/app/build.gradle
 
-      - name: ★최종 AAB 다운로드★
+      - name: AAB 빌드 + signing 로그 추출
+        run: |
+          flutter build appbundle --release --no-tree-shake-icons --verbose > build_log.txt 2>&1
+          grep -i "signing\|keystore\|alias\|fresh-upload-key\|validateSigning\|release" build_log.txt
+
+      - name: AAB 업로드
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_SUCCESS_AAB
+          name: BikeFit_FINAL_AAB
           path: build/app/outputs/bundle/release/app-release.aab
+
+      - name: 로그 아티팩트
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Debug_Logs
+          path: build_log.txt
