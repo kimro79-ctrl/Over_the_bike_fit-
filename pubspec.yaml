@@ -4,7 +4,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0' # 1000013098.jpg의 SDK 오류 해결
+  sdk: '>=3.6.0 <4.0.0'  # Flutter 3.27.1 기준 SDK 범위 수정
 
 dependencies:
   flutter:
