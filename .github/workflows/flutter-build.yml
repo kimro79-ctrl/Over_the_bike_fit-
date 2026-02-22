@@ -5,37 +5,36 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      # 1️⃣ 저장소 체크아웃
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2️⃣ Java & Flutter 설치
       - name: Setup Java & Flutter
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
+          
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      # 3️⃣ Android V2 Embedding 갱신 및 JKS 연결
-      - name: 안드로이드 최신화 및 서명 설정
+      - name: 안드로이드 최신화 및 매니페스트 오류 수정
         run: |
-          echo "📱 Android v2 embedding 최신화 중..."
-          # 기존 프로젝트 유지 + v2 규격 자동 갱신
-          flutter create . --platforms android --overwrite
+          # 1. 안드로이드 구조 최신화
+          flutter create . --platforms android
+          
+          # 2. [핵심] AndroidManifest.xml에서 충돌을 일으키는 package 속성 강제 제거
+          # 사진 1000013132.jpg의 Incorrect package 오류를 해결합니다.
+          find android/app/src/main -name "AndroidManifest.xml" -exec sed -i 's/package="com.overthebike.over_the_bike_fit"//g' {} +
 
-          echo "🔑 release.jks 복사"
+          # 3. 사용자 JKS 복사
           mkdir -p android/app
-          cp release.jks android/app/release.jks || echo "⚠️ 루트에 release.jks가 없으면 실패합니다."
+          cp release.jks android/app/release.jks || echo "JKS 파일 확인 필요"
 
-          echo "🧩 key.properties 생성"
+          # 4. 서명 정보 주입
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -43,35 +42,16 @@ jobs:
           storeFile=release.jks
           EOF
 
-          echo "🛠 build.gradle 서명 설정 적용"
+          # 5. 빌드 설정 강제 적용
           if [ -f "android/app/build.gradle" ]; then
             sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           fi
-
-          echo "🚫 V1 임베딩 코드 자동 정리"
-          # Manifest에서 FlutterApplication → FlutterActivity 교체
-          if grep -q "io.flutter.app.FlutterApplication" android/app/src/main/AndroidManifest.xml; then
-            sed -i 's/io.flutter.app.FlutterApplication/io.flutter.embedding.android.FlutterActivity/g' android/app/src/main/AndroidManifest.xml
-          fi
-
-          # MainActivity.kt 내 V1 import 자동 교체
-          if [ -f "android/app/src/main/kotlin/com/overthebike/over_the_bike_fit/MainActivity.kt" ]; then
-            sed -i 's/import io.flutter.app.FlutterActivity/import io.flutter.embedding.android.FlutterActivity/g' android/app/src/main/kotlin/com/overthebike/over_the_bike_fit/MainActivity.kt
-            sed -i '/override fun onCreate/d' android/app/src/main/kotlin/com/overthebike/over_the_bike_fit/MainActivity.kt
-          fi
-
-          # Gradle 호환성 옵션 보정
-          echo "android.useAndroidX=true" >> android/gradle.properties
-          echo "android.enableJetifier=true" >> android/gradle.properties
-
-          flutter clean
+          
           flutter pub get
 
-      # 4️⃣ AAB 빌드
       - name: AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      # 5️⃣ 결과물 다운로드
       - name: ★최종 AAB 다운로드★
         uses: actions/upload-artifact@v4
         with:
