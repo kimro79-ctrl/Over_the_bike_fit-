@@ -1,4 +1,4 @@
-name: BikeFit Absolute Final Fix
+name: BikeFit Final Success Build
 on:
   workflow_dispatch:
 
@@ -21,35 +21,50 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔐 [v1 에러 즉시 해결 및 키 고정]
+      - name: 🔐 [v1 완전 제거 및 사용자 키 고정]
         run: |
-          # 1. 빌드 캐시 청소
           flutter clean
+          
+          # 1. Manifest에 v2 강제 삽입 (사용자 패키지명 적용)
+          if ! grep -q 'flutterEmbedding.*value="2"' android/app/src/main/AndroidManifest.xml; then
+            sed -i '/<application/a \    <meta-data android:name="flutterEmbedding" android:value="2" />' android/app/src/main/AndroidManifest.xml
+          fi
+          
+          # 2. 기존 MainActivity 완전 삭제 (v1 찌꺼기 제거)
+          find android/app/src/main -name "MainActivity.*" -delete
+          
+          # 3. 사용자 패키지 경로에 맞게 MainActivity.kt 생성
+          # 경로: com/overthebike/over_the_bike_fit
+          mkdir -p android/app/src/main/kotlin/com/overthebike/over_the_bike_fit
+          cat <<EOF > android/app/src/main/kotlin/com/overthebike/over_the_bike_fit/MainActivity.kt
+          package com.overthebike.over_the_bike_fit
 
-          # 2. [필살기] overwrite 없이 낡은 프로젝트 구조만 최신(v2)으로 자동 마이그레이션
-          # 이 한 줄이 MainActivity와 Manifest의 v1 찌꺼기를 안전하게 제거합니다.
-          flutter pub upgrade --major-versions
+          import io.flutter.embedding.android.FlutterActivity
 
-          # 3. key.properties 생성 (사용자님이 옮긴 위치 고정)
+          class MainActivity: FlutterActivity()
+          EOF
+          
+          # 4. key.properties 설정 (android/app/release.jks 고정)
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
           keyAlias=fresh-upload-key
           storeFile=release.jks
           EOF
-
-          # 4. 릴리스 서명 강제 적용
+          
+          # 5. 빌드 설정에서 릴리스 서명 강제 적용
           if [ -f "android/app/build.gradle" ]; then
             sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           fi
 
           flutter pub get
+          flutter pub upgrade --major-versions
 
       - name: AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: ★이게 진짜 최종 결과물★
+      - name: ★최종 결과물 다운로드★
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_KEY_SUCCESS_AAB
+          name: BikeFit_REAL_SUCCESS_AAB
           path: build/app/outputs/bundle/release/app-release.aab
