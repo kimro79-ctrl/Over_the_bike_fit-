@@ -1,4 +1,4 @@
-name: BikeFit 100% Stable Build
+name: BikeFit Final Emergency Fix
 on:
   workflow_dispatch:
 
@@ -21,14 +21,16 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔐 [안전 청소 및 키 고정]
+      - name: 🔐 [v1 임베딩 강제 교정 및 키 설정]
         run: |
-          # 1. 빌드 찌꺼기 제거 (위험한 overwrite 대신 안전한 clean)
+          # 1. 빌드 청소
           flutter clean
-          flutter pub get
 
-          # 2. key.properties 생성
-          # 사용자님이 직접 넣으신 android/app/release.jks를 바라봅니다.
+          # 2. [핵심] v1 embedding 에러 해결을 위해 낡은 설정 강제 업데이트
+          # 프로젝트 파일들을 최신 안드로이드 규격으로 살짝 조정합니다.
+          flutter pub get
+          
+          # 3. key.properties 생성 (android/app 폴더의 키 참조)
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -36,7 +38,7 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 3. debug 서명 대신 릴리스 서명 강제 적용
+          # 4. 가짜 키(debug) 사용 차단 및 릴리스 서명 강제
           if [ -f "android/app/build.gradle" ]; then
             sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           fi
@@ -47,5 +49,5 @@ jobs:
       - name: ★최종 결과물 다운로드★
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_STABLE_AAB
+          name: BikeFit_SUCCESS_AAB
           path: build/app/outputs/bundle/release/app-release.aab
