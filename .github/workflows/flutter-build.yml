@@ -1,4 +1,4 @@
-name: BikeFit Final Success
+name: BikeFit Real Final Success
 on:
   workflow_dispatch:
 
@@ -14,23 +14,24 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-
+          
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔐 [핵심] 서명 정보 안전하게 주입
+      - name: 🔐 [핵심] 진짜 별칭 fresh-upload-key 강제 연결
         run: |
-          # 1. 안드로이드 구조 갱신 (V1 에러 방지)
+          # 1. 낡은 안드로이드 설정 갱신 (V1 에러 방지)
           flutter create . --platforms android --overwrite
 
-          # 2. 루트의 release.jks를 앱 폴더로 복사
+          # 2. 저장소 루트의 release.jks를 앱 폴더로 복사
           mkdir -p android/app
           cp release.jks android/app/release.jks
 
-          # 3. key.properties 파일 생성 (가장 표준적이고 안전한 방식)
+          # 3. 별칭 고정: fresh-upload-key
+          # 이 이름이 틀리면 빌드 서버가 가짜 키를 생성합니다.
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -38,7 +39,7 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 4. build.gradle 수정 (기존 설정을 파괴하지 않고 서명만 release로 고정)
+          # 4. 빌드 서버가 임의의 키를 생성하지 못하도록 릴리스 서명 강제 고정
           if [ -f "android/app/build.gradle" ]; then
             sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           fi
@@ -48,8 +49,8 @@ jobs:
       - name: AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: ★최종 AAB 다운로드★
+      - name: ★최종 결과물 다운로드★
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_FINAL_AAB
+          name: BikeFit_FINAL_SUCCESS
           path: build/app/outputs/bundle/release/app-release.aab
