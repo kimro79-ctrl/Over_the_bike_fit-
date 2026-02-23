@@ -1,4 +1,4 @@
-name: BikeFit Final Success Build
+name: BikeFit Final Simple Build
 on:
   workflow_dispatch:
 
@@ -21,60 +21,14 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔐 [구조 강제 최신화 및 키 설정]
+      - name: 🔐 [키 설정 주입] android/app/release.jks 사용
         run: |
-          # 1. 빌드 청소
+          # 1. 빌드 캐시 청소 (안전용)
           flutter clean
           flutter pub get
 
-          # 2. 사용자 Manifest 적용 (블루투스 권한 포함)
-          cat <<EOF > android/app/src/main/AndroidManifest.xml
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-              package="com.overthebike.over_the_bike_fit">
-              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-              <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
-              <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
-              <application
-                  android:label="Indoor_fit_app" 
-                  android:name="\${applicationName}"
-                  android:icon="@mipmap/launcher_icon"
-                  android:allowBackup="false">
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true"
-                      android:launchMode="singleTop"
-                      android:theme="@style/LaunchTheme"
-                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-                      android:hardwareAccelerated="true"
-                      android:windowSoftInputMode="adjustResize">
-                      <meta-data
-                          android:name="io.flutter.embedding.android.NormalTheme"
-                          android:resource="@style/NormalTheme" />
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN"/>
-                          <category android:name="android.intent.category.LAUNCHER"/>
-                      </intent-filter>
-                  </activity>
-                  <meta-data
-                      android:name="flutterEmbedding"
-                      android:value="2" />
-              </application>
-          </manifest>
-          EOF
-
-          # 3. [에러 해결 핵심] MainActivity를 최신 규격(v2)으로 새로 작성
-          # 기존의 낡은 Java/Kotlin 파일을 찾아내서 최신 구조로 덮어씁니다.
-          FIND_PATH=\$(find android/app/src/main -name "MainActivity.*")
-          cat <<EOF > \$FIND_PATH
-          package com.overthebike.over_the_bike_fit;
-          import io.flutter.embedding.android.FlutterActivity;
-          public class MainActivity extends FlutterActivity {
-          }
-          EOF
-
-          # 4. key.properties 설정 (사용자님의 android/app/release.jks 고정)
+          # 2. key.properties 생성
+          # 사용자님이 옮겨두신 android/app/release.jks를 그대로 연결합니다.
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -82,7 +36,7 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 5. 서명 강제 적용
+          # 3. 릴리스 서명 강제 적용 (debug 방지)
           if [ -f "android/app/build.gradle" ]; then
             sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           fi
@@ -90,7 +44,7 @@ jobs:
       - name: AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: ★성공 결과물 다운로드★
+      - name: ★최종 결과물 다운로드★
         uses: actions/upload-artifact@v4
         with:
           name: BikeFit_FINAL_AAB
