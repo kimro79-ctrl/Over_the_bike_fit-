@@ -1,4 +1,4 @@
-name: BikeFit Safe Key Build
+name: BikeFit 100% Stable Build
 on:
   workflow_dispatch:
 
@@ -21,12 +21,14 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔐 [키 고정] android/app 내의 파일 직접 사용
+      - name: 🔐 [안전 청소 및 키 고정]
         run: |
-          # 1. 기존 key.properties가 있다면 삭제 (중복 방지)
-          rm -f android/key.properties
+          # 1. 빌드 찌꺼기 제거 (위험한 overwrite 대신 안전한 clean)
+          flutter clean
+          flutter pub get
 
-          # 2. 사용자님이 android/app/에 넣어둔 release.jks를 바라보는 설정 생성
+          # 2. key.properties 생성
+          # 사용자님이 직접 넣으신 android/app/release.jks를 바라봅니다.
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -34,13 +36,10 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 3. build.gradle에서 debug 서명을 강제로 release 서명으로 교체
-          # (파일 구조는 건드리지 않고 빌드 설정만 한 줄 바꿉니다)
+          # 3. debug 서명 대신 릴리스 서명 강제 적용
           if [ -f "android/app/build.gradle" ]; then
             sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           fi
-
-          flutter pub get
 
       - name: AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
@@ -48,5 +47,5 @@ jobs:
       - name: ★최종 결과물 다운로드★
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_SUCCESS_AAB
+          name: BikeFit_STABLE_AAB
           path: build/app/outputs/bundle/release/app-release.aab
