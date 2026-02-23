@@ -1,4 +1,4 @@
-name: BikeFit Final Success Fixed
+name: BikeFit Final Success
 on:
   workflow_dispatch:
 
@@ -21,17 +21,17 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔐 진짜 키(75:CD) 강제 고정 및 설정 초기화
+      - name: 🔐 메인 jks 파일 강제 연결
         run: |
-          # 1. 꼬인 안드로이드 설정 완전 초기화
+          # 1. 꼬인 설정 초기화
           flutter create . --platforms android --overwrite
 
-          # 2. [중요] 2개의 jks 중 진짜를 선택해서 android/app으로 복사
-          # 사용자님이 리포지토리 루트에 두신 그 '진짜' release.jks를 사용합니다.
+          # 2. [가장 중요] 메인 리포지토리에 있는 release.jks를 빌드 위치로 강제 복사
+          # 사용자님이 올리신 그 파일을 시스템이 못 찾을 수 없게 만듭니다.
           mkdir -p android/app
           cp release.jks android/app/release.jks
 
-          # 3. key.properties 설정 (20일 재등록 당시 정보로 고정)
+          # 3. 서명 정보 직접 주입 (20일 등록 정보)
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -39,7 +39,7 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 4. 가짜(디버그) 키 생성을 법적으로 금지
+          # 4. 가짜(디버그) 키 생성을 법적으로 차단
           if [ -f "android/app/build.gradle" ]; then
             sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           fi
@@ -49,8 +49,8 @@ jobs:
       - name: AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: ★최종 결과물 다운로드★
+      - name: ★최종 AAB 다운로드★
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_REAL_SUCCESS_AAB
+          name: BikeFit_FINAL_AAB
           path: build/app/outputs/bundle/release/app-release.aab
