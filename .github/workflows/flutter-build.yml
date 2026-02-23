@@ -1,4 +1,4 @@
-name: BikeFit Final Signing Fix
+name: BikeFit - Embedding & Signing Fix
 on:
   workflow_dispatch:
 
@@ -18,17 +18,18 @@ jobs:
         with:
           flutter-version: '3.27.1'
 
-      - name: Hard Reset & Force Signing
+      - name: Upgrade Android Embedding & Fix Signing
         run: |
-          # 1. 이전 찌꺼기 제거
+          # 1. 예전 v1 embedding 관련 설정 제거 및 프로젝트 복구
           flutter clean
-          rm -f android/key.properties
+          # 프로젝트를 최신 Flutter 규격으로 강제 업데이트 (v2 embedding 적용)
+          flutter create . --platforms android --overwrite
           
-          # 2. 루트에 있는 release.jks를 안드로이드 앱 폴더로 강제 복사
+          # 2. 서명 키 강제 주입
           mkdir -p android/app
           cp release.jks android/app/release.jks || exit 1
 
-          # 3. key.properties 설정 강제 생성
+          # 3. key.properties 파일 재생성
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -39,16 +40,17 @@ jobs:
       - name: Build App Bundle
         run: |
           flutter pub get
-          flutter build appbundle --release --verbose
+          # 최신 Flutter에서는 아래 명령어로 빌드해야 안정적입니다.
+          flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 🚨 지문 검증 (이걸 확인하세요)
+      - name: 🚨 지문 검증 (75:CD... 확인 필수)
         run: |
-          echo "현재 빌드된 파일의 SHA1 지문입니다:"
+          echo "현재 빌드된 AAB의 지문입니다:"
           keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab | grep SHA1
-          echo "위 값이 구글 콘솔의 75:CD...와 똑같아야 합니다."
+          echo "구글 콘솔의 75:CD:32... 와 정확히 일치해야 합니다."
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Final_AAB
+          name: BikeFit_Fixed_AAB
           path: build/app/outputs/bundle/release/app-release.aab
