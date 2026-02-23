@@ -1,4 +1,4 @@
-name: BikeFit Final Emergency Fix
+name: BikeFit Manifest Fix Build
 on:
   workflow_dispatch:
 
@@ -21,16 +21,17 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔐 [v1 임베딩 강제 교정 및 키 설정]
+      - name: 🔐 [AndroidManifest 수리 및 키 설정]
         run: |
           # 1. 빌드 청소
           flutter clean
-
-          # 2. [핵심] v1 embedding 에러 해결을 위해 낡은 설정 강제 업데이트
-          # 프로젝트 파일들을 최신 안드로이드 규격으로 살짝 조정합니다.
           flutter pub get
+
+          # 2. AndroidManifest.xml 정밀 수리 (v1 embedding 해결)
+          # application 태그의 android:name 부분을 최신 규격으로 교체하거나 삭제합니다.
+          sed -i 's/android:name="io.flutter.app.FlutterApplication"//g' android/app/src/main/AndroidManifest.xml
           
-          # 3. key.properties 생성 (android/app 폴더의 키 참조)
+          # 3. key.properties 생성 (사용자님이 옮긴 android/app/ 위치 고정)
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -38,7 +39,7 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 4. 가짜 키(debug) 사용 차단 및 릴리스 서명 강제
+          # 4. debug 대신 release 서명 강제 적용
           if [ -f "android/app/build.gradle" ]; then
             sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           fi
@@ -49,5 +50,5 @@ jobs:
       - name: ★최종 결과물 다운로드★
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_SUCCESS_AAB
+          name: BikeFit_MANIFEST_FIXED_AAB
           path: build/app/outputs/bundle/release/app-release.aab
