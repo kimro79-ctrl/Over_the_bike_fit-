@@ -1,4 +1,4 @@
-name: BikeFit Final Success
+name: BikeFit Final Signing Fixed
 on:
   workflow_dispatch:
 
@@ -14,24 +14,23 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-
+          
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔐 메인 루트의 JKS 강제 주입
+      - name: 🔐 [핵심] 다른 코드 건드리지 않고 서명만 주입
         run: |
-          # 1. 꼬인 안드로이드 설정 강제 초기화
+          # 1. 꼬인 안드로이드 설정 초기화 (main.dart 등은 보존됨)
           flutter create . --platforms android --overwrite
 
-          # 2. 메인 루트에 있는 그 '진짜' release.jks를 빌드 경로로 복사
-          # 파일이 겉보기에 비어있어도 여기서 강제로 심장에 박습니다.
+          # 2. 메인 루트의 진짜 release.jks를 앱 폴더로 강제 복사
           mkdir -p android/app
           cp release.jks android/app/release.jks
 
-          # 3. key.properties 생성 (비밀번호와 별칭 고정)
+          # 3. 서명 정보 주입 (20일 재등록 정보)
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -39,7 +38,7 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 4. 임시 가짜 키 사용 원천 차단
+          # 4. 빌드 서버가 임시 가짜 키를 생성하는 것을 원천 차단
           if [ -f "android/app/build.gradle" ]; then
             sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           fi
@@ -49,8 +48,8 @@ jobs:
       - name: AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: ★최종 AAB 다운로드★
+      - name: ★최종 결과물 다운로드★
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_FINAL_AAB
+          name: BikeFit_REAL_SUCCESS
           path: build/app/outputs/bundle/release/app-release.aab
