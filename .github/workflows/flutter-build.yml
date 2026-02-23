@@ -1,4 +1,4 @@
-name: BikeFit - Embedding & Signing Fix
+name: BikeFit - Absolute Final Fix 2026
 on:
   workflow_dispatch:
 
@@ -18,18 +18,21 @@ jobs:
         with:
           flutter-version: '3.27.1'
 
-      - name: Upgrade Android Embedding & Fix Signing
+      - name: 🔥 Fix Android V1 Embedding & Inject Verified Key
         run: |
-          # 1. 예전 v1 embedding 관련 설정 제거 및 프로젝트 복구
+          # 1. 빌드 환경 초기화
           flutter clean
-          # 프로젝트를 최신 Flutter 규격으로 강제 업데이트 (v2 embedding 적용)
+          rm -rf android/app/build android/key.properties
+          
+          # 2. V1 Embedding 에러 해결을 위해 안드로이드 프로젝트 강제 갱신
+          # (이미지 1000013293.jpg의 에러를 해결하는 핵심 단계입니다)
           flutter create . --platforms android --overwrite
           
-          # 2. 서명 키 강제 주입
+          # 3. 검증된 release.jks 파일을 앱 폴더로 강제 주입
           mkdir -p android/app
           cp release.jks android/app/release.jks || exit 1
 
-          # 3. key.properties 파일 재생성
+          # 4. 서명 설정(key.properties) 강제 생성
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -37,20 +40,21 @@ jobs:
           storeFile=release.jks
           EOF
 
-      - name: Build App Bundle
+      - name: Build App Bundle (Release)
         run: |
           flutter pub get
-          # 최신 Flutter에서는 아래 명령어로 빌드해야 안정적입니다.
+          # 아이콘 쉐이킹 문제 방지 및 릴리즈 빌드
           flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 🚨 지문 검증 (75:CD... 확인 필수)
+      - name: 🚨 FINAL CHECK: FINGERPRINT 🚨
         run: |
-          echo "현재 빌드된 AAB의 지문입니다:"
+          echo "===================================================="
+          echo "빌드된 파일의 SHA1을 확인합니다 (반드시 75:CD... 여야 함)"
           keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab | grep SHA1
-          echo "구글 콘솔의 75:CD:32... 와 정확히 일치해야 합니다."
+          echo "===================================================="
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Fixed_AAB
+          name: BikeFit_Final_Ready_To_Upload
           path: build/app/outputs/bundle/release/app-release.aab
