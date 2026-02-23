@@ -1,4 +1,4 @@
-name: BikeFit Direct App Folder Build
+name: BikeFit Safe Key Build
 on:
   workflow_dispatch:
 
@@ -21,13 +21,13 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔐 [정적 경로 빌드] android/app 내의 키 사용
+      - name: 🔐 [고정 release.jks 사용]
         run: |
-          # 1. 안드로이드 설정 강제 초기화 (기존 찌꺼기 제거)
-          flutter create . --platforms android --overwrite
+          # 1. 기존 key.properties가 있다면 삭제 후 새로 생성 (꼬임 방지)
+          rm -f android/key.properties
 
-          # 2. key.properties 설정
-          # 사용자님이 직접 android/app에 넣으신 release.jks를 바라봅니다.
+          # 2. key.properties 생성
+          # android/app/release.jks를 정확히 바라봅니다.
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -35,7 +35,8 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 3. 빌드 설정에서 릴리스 서명 강제 적용
+          # 3. debug 대신 release 서명 강제 적용
+          # 이 작업은 프로젝트 코드를 건드리지 않고 빌드 설정만 바꿉니다.
           if [ -f "android/app/build.gradle" ]; then
             sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           fi
