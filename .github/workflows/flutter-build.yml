@@ -1,4 +1,4 @@
-name: BikeFit V2-Embedding Fix & Build
+name: BikeFit V2-Fix & Build
 
 on:
   workflow_dispatch:
@@ -22,29 +22,30 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🛠️ V1 Embedding 강제 제거 및 최신화
+      - name: 🛠️ V1 임베딩 강제 제거 및 최신화 설정
         run: |
           flutter clean
 
-          # 1. 패키지 경로 설정 (사용자님의 실제 패키지명 적용)
+          # 1. 패키지명과 경로를 indoor_bike_fit으로 일치 (중요)
+          PACKAGE_NAME="com.kimro79.indoor_bike_fit"
           PACKAGE_PATH="android/app/src/main/kotlin/com/kimro79/indoor_bike_fit"
+          
+          # 기존의 잘못된 MainActivity 삭제 후 V2 규격으로 생성
+          find android/app/src/main -name "MainActivity.*" -delete
           mkdir -p $PACKAGE_PATH
-
-          # 2. V1 에러의 주범인 MainActivity를 최신 V2 코드로 교체
           cat <<EOF > $PACKAGE_PATH/MainActivity.kt
-          package com.kimro79.indoor_bike_fit
+          package $PACKAGE_NAME
           import io.flutter.embedding.android.FlutterActivity
           class MainActivity: FlutterActivity()
           EOF
 
-          # 3. AndroidManifest.xml에서 V1 관련 메타데이터 강제 삭제 및 수정
-          # 이 과정이 없으면 계속 V1 에러가 발생합니다.
+          # 2. AndroidManifest.xml에서 V1 에러를 유발하는 구식 설정들 강제 삭제
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           sed -i '/android:name="io.flutter.app.FlutterApplication"/d' $MANIFEST
           sed -i '/io.flutter.embedding.android.NormalThemes/d' $MANIFEST
           sed -i '/io.flutter.embedding.android.SplashScreenDrawable/d' $MANIFEST
 
-          # 4. key.properties 생성 (Sodomaki80 비밀번호 적용)
+          # 3. key.properties 생성 (사용자님이 넣은 android/app/release.jks 참조)
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -52,7 +53,7 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 5. 서명 설정 강제 적용
+          # 4. build.gradle 서명 설정 강제 적용
           if [ -f "android/app/build.gradle" ]; then
             sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           fi
