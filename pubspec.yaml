@@ -1,20 +1,34 @@
 name: over_the_bike_fit
 description: A new Flutter project.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+4
 
 environment:
-  sdk: '>=3.6.0 <4.0.0' # 사용자님 말씀대로 3.6.0으로 수정했습니다.
+  sdk: '>=3.6.0 <4.0.0'  # Flutter 3.27.1 이상 대응
 
 dependencies:
   flutter:
     sdk: flutter
+
+  # 차트 관련 최신 버전 (안정적)
   fl_chart: ^0.70.0
+
+  # 날짜/시간/로케일 처리
   intl: ^0.19.0
+
+  # 로컬 저장소 (V2 완전 호환)
   shared_preferences: ^2.3.5
-  flutter_blue_plus: ^1.34.4
-  permission_handler: ^11.3.1
+
+  # 블루투스 제어 (V2 임베딩 완전 호환 버전)
+  flutter_blue_plus: ^1.35.0
+
+  # 권한 관리 (V2 embedding 전환 완료)
+  permission_handler: ^12.0.1
+
+  # 일정 캘린더 UI
   table_calendar: ^3.1.2
+
+  # iOS 스타일 아이콘
   cupertino_icons: ^1.0.6
 
 dev_dependencies:
