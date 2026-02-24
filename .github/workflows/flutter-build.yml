@@ -1,4 +1,4 @@
-name: BikeFit Absolute Reset Build
+name: BikeFit Absolute V2 Fix Build
 
 on:
   workflow_dispatch:
@@ -6,6 +6,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -22,27 +23,22 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔥 [결정적 단계] 모든 구식 안드로이드 설정 파괴 및 최신화
+      - name: 🔧 자동 V1 잔재 탐지 및 완전 제거
         run: |
-          # 1. 기존 빌드 캐시 및 에러 유발 폴더 삭제
-          flutter clean
-          rm -rf android/app/src/main/kotlin/com/overthebike
-          rm -f android/app/src/main/AndroidManifest.xml
-          rm -f android/app/build.gradle
-          
-          # 2. 패키지 경로 재생성
+          echo "🔍 구식 Android V1 embedding 잔재 검색 및 제거 중..."
+          find android/app/src -name "*.java" -o -name "*.kt" | grep -E "MainActivity|Application" | xargs rm -f || true
+
           PACKAGE_NAME="com.overthebike.over_the_bike_fit"
           PACKAGE_PATH="android/app/src/main/kotlin/com/overthebike/over_the_bike_fit"
           mkdir -p $PACKAGE_PATH
 
-          # 3. MainActivity.kt 최신 V2 규격 생성
           cat <<EOF > $PACKAGE_PATH/MainActivity.kt
           package $PACKAGE_NAME
           import io.flutter.embedding.android.FlutterActivity
           class MainActivity: FlutterActivity()
           EOF
+          echo "✅ MainActivity.kt 재생성 완료"
 
-          # 4. AndroidManifest.xml 최신 V2 규격 생성
           cat <<EOF > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
               package="$PACKAGE_NAME">
@@ -69,20 +65,23 @@ jobs:
               </application>
           </manifest>
           EOF
+          echo "✅ AndroidManifest.xml 최신화 완료"
 
-          # 5. build.gradle 완전 재작성 (사용자님의 사진에서 누락된 로직 강제 주입)
           cat <<EOF > android/app/build.gradle
           def keystoreProperties = new Properties()
           def keystorePropertiesFile = rootProject.file('key.properties')
           if (keystorePropertiesFile.exists()) {
               keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
           }
+
           def localProperties = new Properties()
           def localPropertiesFile = rootProject.file('local.properties')
           if (localPropertiesFile.exists()) {
               localProperties.load(new FileInputStream(localPropertiesFile))
           }
+
           def flutterRoot = localProperties.getProperty('flutter.sdk')
+
           apply plugin: 'com.android.application'
           apply plugin: 'kotlin-android'
           apply from: "\$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
@@ -90,6 +89,7 @@ jobs:
           android {
               namespace "$PACKAGE_NAME"
               compileSdkVersion 34
+
               defaultConfig {
                   applicationId "$PACKAGE_NAME"
                   minSdkVersion 21
@@ -97,6 +97,7 @@ jobs:
                   versionCode 4
                   versionName "1.0.3"
               }
+
               signingConfigs {
                   release {
                       keyAlias keystoreProperties['keyAlias']
@@ -105,6 +106,7 @@ jobs:
                       storePassword keystoreProperties['storePassword']
                   }
               }
+
               buildTypes {
                   release {
                       signingConfig signingConfigs.release
@@ -114,27 +116,33 @@ jobs:
                   }
               }
           }
+
           flutter { source '../..' }
+
           dependencies {
               implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:\$kotlin_version"
           }
           EOF
+          echo "✅ build.gradle 최신화 완료"
 
-          # 6. key.properties 설정 (사용자님 release.jks 정보)
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
           keyAlias=fresh-upload-key
           storeFile=release.jks
           EOF
+          echo "✅ key.properties 생성 완료"
 
+          echo "📦 플러그인 최신화 중..."
+          flutter clean
+          flutter pub upgrade --major-versions
           flutter pub get
 
       - name: 🚀 AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 📦 ★최종 AAB 파일 다운로드★
+      - name: 📦 최종 AAB 파일 다운로드
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_FINAL_AAB
+          name: BikeFit_V2_FIXED_AAB
           path: build/app/outputs/bundle/release/*.aab
