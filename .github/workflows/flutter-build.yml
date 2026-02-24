@@ -8,24 +8,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Java & Flutter
+      - name: ☕ Setup Java & Flutter
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Flutter
+      - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔧 Android 빌드 환경 정리 및 최신화
+      - name: 🧹 Android 빌드 환경 정리 및 최신화
         run: |
-          echo "🧹 Cleaning build environment..."
+          echo "🧼 Cleaning build environment..."
           flutter clean
 
           echo "📦 Upgrading dependencies..."
@@ -66,7 +66,6 @@ jobs:
               </application>
           </manifest>
           EOF
-
           echo "✅ Project structure verified."
 
       - name: 🔐 Keystore 설정
@@ -79,8 +78,22 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 업로드된 release.jks 복사
-          cp $GITHUB_WORKSPACE/android/app/release.jks android/app/release.jks
+          # 이미 존재하면 복사하지 않음
+          if [ ! -f "android/app/release.jks" ]; then
+            echo "📦 Copying release.jks..."
+            cp $GITHUB_WORKSPACE/release.jks android/app/release.jks
+          else
+            echo "✅ release.jks already exists. Skipping copy."
+          fi
+
+      - name: 🔍 SHA1 인증서 지문 출력 (Google Play 검증용)
+        run: |
+          echo "🔎 Extracting SHA1 from release.jks..."
+          keytool -list -v \
+            -keystore android/app/release.jks \
+            -alias fresh-upload-key \
+            -storepass Sodomaki80 \
+            -keypass Sodomaki80 | grep "SHA1"
 
       - name: 🚀 AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
