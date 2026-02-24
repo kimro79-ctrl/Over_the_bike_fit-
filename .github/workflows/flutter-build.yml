@@ -1,4 +1,4 @@
-name: BikeFit FINAL Absolute Clean Build V2
+name: BikeFit FINAL Clean Build (Flutter 3.19.6)
 
 on:
   workflow_dispatch:
@@ -17,25 +17,23 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 🐦 Setup Flutter
+      - name: 🐦 Setup Flutter (다운그레이드 안정판)
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.1'
+          flutter-version: '3.19.6'
           channel: 'stable'
 
-      - name: 🧹 캐시 완전 초기화 및 플러그인 재설치
+      - name: 🧹 환경 초기화 및 종속성 최신화
         run: |
-          echo "🧼 Full cleaning environment..."
-          rm -rf ~/.pub-cache
-          rm -rf $FLUTTER_ROOT/.pub-cache
+          echo "🧼 Cleaning Flutter environment..."
           flutter clean
-
-          echo "📦 Fetching dependencies fresh..."
-          flutter pub get
-          flutter pub upgrade --major-versions
+          rm -rf ~/.pub-cache
           flutter pub cache repair || true
+          echo "📦 Upgrading and fetching dependencies..."
+          flutter pub get
+          flutter pub upgrade --major-versions || true
 
-          echo "✅ Ensuring modern Android structure..."
+          echo "✅ Ensuring Android V2 structure..."
           mkdir -p android/app/src/main/kotlin/com/overthebike/over_the_bike_fit
           cat <<EOF > android/app/src/main/kotlin/com/overthebike/over_the_bike_fit/MainActivity.kt
           package com.overthebike.over_the_bike_fit
@@ -70,13 +68,13 @@ jobs:
           </manifest>
           EOF
 
-          echo "🧹 Removing legacy GeneratedPluginRegistrant (V1 embedding)"
-          rm -rf android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+          echo "🧹 Removing legacy GeneratedPluginRegistrant..."
+          rm -rf android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java || true
           echo "✅ Android structure verified."
 
       - name: 🔐 Keystore 설정
         run: |
-          echo "🔑 Setting up keystore..."
+          echo "🔑 Configuring keystore..."
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -85,29 +83,33 @@ jobs:
           EOF
 
           if [ ! -f "android/app/release.jks" ]; then
+            echo "📦 Copying release.jks..."
             cp $GITHUB_WORKSPACE/release.jks android/app/release.jks
-          fi
-
-      - name: 🧩 플러그인 내부 V1 코드 무력화
-        run: |
-          echo "🧩 Scanning Flutter pub cache for V1 code..."
-          find ~/.pub-cache -type f -name "*.java" -exec grep -l "registerWith" {} \; > found_v1_plugins.txt || true
-          if [ -s found_v1_plugins.txt ]; then
-            echo "🧩 Found V1 plugins:"
-            cat found_v1_plugins.txt
-            echo "🔧 Patching..."
-            cat found_v1_plugins.txt | xargs sed -i 's/registerWith/ignoredRegisterWith/g'
           else
-            echo "✅ No V1 embedding found in plugins."
+            echo "✅ release.jks already exists. Skipping copy."
           fi
 
-      - name: 🚀 AAB 빌드 실행
+      - name: 🔍 SHA1 인증서 지문 출력
         run: |
-          echo "🚀 Building clean AAB..."
+          echo "🔎 Extracting SHA1 fingerprint..."
+          keytool -list -v \
+            -keystore android/app/release.jks \
+            -alias fresh-upload-key \
+            -storepass Sodomaki80 \
+            -keypass Sodomaki80 | grep "SHA1"
+
+      - name: 🧩 V1 코드 탐지
+        run: |
+          echo "🔍 Scanning project for registerWith..."
+          grep -r "registerWith" . || echo "✅ No registerWith() found in project."
+
+      - name: 🚀 AAB 빌드 실행 (안정 호환 모드)
+        run: |
+          echo "🚀 Building release AAB with Flutter 3.19.6..."
           flutter build appbundle --release --no-tree-shake-icons
 
       - name: 📦 최종 AAB 파일 다운로드
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_FINAL_SIGNED_AAB
+          name: BikeFit_FINAL_AAB_3.19.6
           path: build/app/outputs/bundle/release/*.aab
