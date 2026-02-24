@@ -4,17 +4,31 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localProperties.load(new FileInputStream(localPropertiesFile))
+}
+
+def flutterRoot = localProperties.getProperty('flutter.sdk')
+if (flutterRoot == null) {
+    throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
+}
+
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+// 아래 코드가 플러터 빌드의 핵심입니다. 사진에는 이 부분이 빠져있었습니다.
+apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+
 android {
-    // 프로젝트 이름 indoor_bike_fit을 반영한 네임스페이스 설정
-    namespace "com.kimro79.indoor_bike_fit" 
-    compileSdk 34
+    // 패키지명을 over_the_bike_fit으로 통일합니다.
+    namespace "com.overthebike.over_the_bike_fit"
+    compileSdkVersion 34
 
     defaultConfig {
-        applicationId "com.kimro79.indoor_bike_fit"
-        minSdk 21
-        targetSdk 34
-        
-        // 3번 빌드 성공 기록이 있으시므로, 4번으로 업데이트합니다.
+        applicationId "com.overthebike.over_the_bike_fit"
+        minSdkVersion 21
+        targetSdkVersion 34
         versionCode 4
         versionName "1.0.3"
     }
@@ -23,7 +37,7 @@ android {
         release {
             keyAlias keystoreProperties['keyAlias']
             keyPassword keystoreProperties['keyPassword']
-            storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+            storeFile file(keystoreProperties['storeFile'])
             storePassword keystoreProperties['storePassword']
         }
     }
@@ -31,11 +45,17 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            
-            // 구글 콘솔 업로드 시 코드 최적화를 위해 true 설정
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }
