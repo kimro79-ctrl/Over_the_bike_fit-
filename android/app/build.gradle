@@ -1,0 +1,42 @@
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    // GitHub 레포지토리 경로 기반 패키지명 설정
+    namespace "com.kimro79.indoor_bike_fit" 
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.kimro79.indoor_bike_fit"
+        minSdk 21
+        targetSdk 34
+        
+        // 이전에 3번 빌드 성공하셨으므로, 콘솔 업로드를 위해 버전을 4로 올립니다.
+        versionCode 4
+        versionName "1.0.3"
+    }
+
+    signingConfigs {
+        release {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+            storePassword keystoreProperties['storePassword']
+        }
+    }
+
+    buildTypes {
+        release {
+            // 위에서 설정한 release 서명을 적용합니다.
+            signingConfig signingConfigs.release
+            
+            // 앱 최적화 및 코드 보호 설정
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
