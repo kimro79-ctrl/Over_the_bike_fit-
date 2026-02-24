@@ -1,4 +1,4 @@
-name: BikeFit Final Emergency Fix
+name: BikeFit Final Build Fix
 
 on:
   workflow_dispatch:
@@ -22,19 +22,14 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🛠️ 구식 설정 강제 삭제 및 최신 규격(V2) 주입
+      - name: 🛠️ build.gradle 및 핵심 설정 강제 재작성
         run: |
           flutter clean
-          
-          # 1. 패키지명 고정 (over_the_bike_fit)
           PACKAGE_NAME="com.overthebike.over_the_bike_fit"
           PACKAGE_PATH="android/app/src/main/kotlin/com/overthebike/over_the_bike_fit"
-          
-          # 2. 에러 유발 파일들 삭제
-          find android/app/src/main -name "MainActivity.*" -delete
-          rm -f android/app/src/main/AndroidManifest.xml
 
-          # 3. MainActivity.kt 새로 생성
+          # 1. MainActivity.kt 생성 (패키지 경로 일치)
+          find android/app/src/main -name "MainActivity.*" -delete
           mkdir -p $PACKAGE_PATH
           cat <<EOF > $PACKAGE_PATH/MainActivity.kt
           package $PACKAGE_NAME
@@ -42,7 +37,7 @@ jobs:
           class MainActivity: FlutterActivity()
           EOF
 
-          # 4. AndroidManifest.xml 새로 생성 (V2 임베딩 강제 명시)
+          # 2. AndroidManifest.xml 생성 (V2 임베딩 고정)
           cat <<EOF > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
               package="$PACKAGE_NAME">
@@ -70,7 +65,70 @@ jobs:
           </manifest>
           EOF
 
-          # 5. 기존 release.jks 연결 및 key.properties 생성
+          # 3. build.gradle 완전 재작성 (사용자님이 올려주신 코드의 부족한 부분 보충)
+          cat <<EOF > android/app/build.gradle
+          def keystoreProperties = new Properties()
+          def keystorePropertiesFile = rootProject.file('key.properties')
+          if (keystorePropertiesFile.exists()) {
+              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+          }
+
+          def localProperties = new Properties()
+          def localPropertiesFile = rootProject.file('local.properties')
+          if (localPropertiesFile.exists()) {
+              localProperties.load(new FileInputStream(localPropertiesFile))
+          }
+
+          def flutterRoot = localProperties.getProperty('flutter.sdk')
+          if (flutterRoot == null) {
+              throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
+          }
+
+          apply plugin: 'com.android.application'
+          apply plugin: 'kotlin-android'
+          apply from: "\$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+
+          android {
+              namespace "$PACKAGE_NAME"
+              compileSdkVersion 34
+
+              defaultConfig {
+                  applicationId "$PACKAGE_NAME"
+                  minSdkVersion 21
+                  targetSdkVersion 34
+                  versionCode 4
+                  versionName "1.0.3"
+              }
+
+              signingConfigs {
+                  release {
+                      keyAlias keystoreProperties['keyAlias']
+                      keyPassword keystoreProperties['keyPassword']
+                      storeFile file(keystoreProperties['storeFile'])
+                      storePassword keystoreProperties['storePassword']
+                  }
+              }
+
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                      minifyEnabled true
+                      shrinkResources true
+                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                  }
+              }
+          }
+
+          flutter {
+              source '../..'
+          }
+
+          dependencies {
+              implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:\$kotlin_version"
+          }
+          EOF
+
+          # 4. key.properties 설정 (사용자님 소유 release.jks 정보)
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -78,18 +136,9 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 6. build.gradle 설정 강제 교체 (V1 에러의 핵심 원인 제거)
-          GRADLE_FILE="android/app/build.gradle"
-          if [ -f "$GRADLE_FILE" ]; then
-            # 패키지명 일치 및 서명 설정 적용
-            sed -i "s/applicationId \".*\"/applicationId \"$PACKAGE_NAME\"/g" $GRADLE_FILE
-            sed -i "s/namespace \".*\"/namespace \"$PACKAGE_NAME\"/g" $GRADLE_FILE
-            sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' $GRADLE_FILE
-          fi
-
           flutter pub get
 
-      - name: AAB 빌드 실행 (V2 규격 적용)
+      - name: 🚀 AAB 빌드 실행 (최종 수정본)
         run: flutter build appbundle --release --no-tree-shake-icons
 
       - name: 📦 ★최종 AAB 파일 다운로드★
