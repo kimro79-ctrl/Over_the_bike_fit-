@@ -1,4 +1,4 @@
-name: BikeFit FINAL AAB Release Build
+name: BikeFit FINAL V2 Release Build
 
 on:
   workflow_dispatch:
@@ -94,6 +94,11 @@ jobs:
             -alias fresh-upload-key \
             -storepass Sodomaki80 \
             -keypass Sodomaki80 | grep "SHA1"
+
+      - name: 🧩 Check for V1 embedding plugins
+        run: |
+          echo "🔍 Checking for any old V1 embedding code..."
+          grep -r "registerWith" . || echo "✅ No V1 embedding code found"
 
       - name: 🚀 AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
