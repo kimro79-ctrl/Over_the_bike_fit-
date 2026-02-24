@@ -1,4 +1,4 @@
-name: BikeFit Build Solution
+name: BikeFit OverTheBike Unified Build
 
 on:
   workflow_dispatch:
@@ -22,28 +22,33 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🛠️ 부족한 MainActivity 생성 및 매니페스트 완전 교정
+      - name: 🛠️ 패키지명(over_the_bike_fit) 통일 및 파일 강제 생성
         run: |
+          # 1. 빌드 환경 정리
           flutter clean
 
-          # 1. 패키지 경로를 indoor_bike_fit으로 고정하여 새로 생성
-          PACKAGE_PATH="android/app/src/main/kotlin/com/kimro79/indoor_bike_fit"
-          mkdir -p $PACKAGE_PATH
+          # 2. 패키지명 고정 (사용자님 요청: over_the_bike_fit)
+          PACKAGE_NAME="com.overthebike.over_the_bike_fit"
+          PACKAGE_PATH="android/app/src/main/kotlin/com/overthebike/over_the_bike_fit"
+          
+          # 3. 기존의 꼬인 경로 및 파일 삭제
+          find android/app/src/main -name "MainActivity.*" -delete
+          rm -f android/app/src/main/AndroidManifest.xml
 
-          # 2. 없었던 MainActivity.kt를 최신 규격(V2)으로 새로 생성
+          # 4. MainActivity.kt 새로 생성 (over_the_bike_fit 경로에 맞춤)
+          mkdir -p $PACKAGE_PATH
           cat <<EOF > $PACKAGE_PATH/MainActivity.kt
-          package com.kimro79.indoor_bike_fit
+          package $PACKAGE_NAME
           import io.flutter.embedding.android.FlutterActivity
           class MainActivity: FlutterActivity()
           EOF
 
-          # 3. AndroidManifest.xml을 프로젝트 명칭에 맞게 싹 새로 쓰기
-          # 기존의 overthebike 흔적을 지우고 indoor_bike_fit으로 교체합니다.
+          # 5. AndroidManifest.xml 새로 생성 (V2 임베딩 및 패키지명 고정)
           cat <<EOF > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-              package="com.kimro79.indoor_bike_fit">
+              package="$PACKAGE_NAME">
               <application
-                  android:label="indoor_bike_fit"
+                  android:label="over_the_bike_fit"
                   android:name="\${applicationName}"
                   android:icon="@mipmap/ic_launcher">
                   <activity
@@ -55,37 +60,4 @@ jobs:
                       android:hardwareAccelerated="true"
                       android:windowSoftInputMode="adjustResize">
                       <intent-filter>
-                          <action android:name="android.intent.action.MAIN"/>
-                          <category android:name="android.intent.category.LAUNCHER"/>
-                      </intent-filter>
-                  </activity>
-                  <meta-data
-                      android:name="flutterEmbedding"
-                      android:value="2" />
-              </application>
-          </manifest>
-          EOF
-
-          # 4. 키 설정 (Sodomaki80 및 android/app/release.jks 참조)
-          cat <<EOF > android/key.properties
-          storePassword=Sodomaki80
-          keyPassword=Sodomaki80
-          keyAlias=fresh-upload-key
-          storeFile=release.jks
-          EOF
-
-          # 5. 서명 설정 강제 적용
-          if [ -f "android/app/build.gradle" ]; then
-            sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
-          fi
-
-          flutter pub get
-
-      - name: AAB 빌드 실행 (최종 업로드용)
-        run: flutter build appbundle --release --no-tree-shake-icons
-
-      - name: ★최종 결과물 다운로드★
-        uses: actions/upload-artifact@v4
-        with:
-          name: BikeFit_Final_AAB
-          path: build/app/outputs/bundle/release/app-release.aab
+                          <action
