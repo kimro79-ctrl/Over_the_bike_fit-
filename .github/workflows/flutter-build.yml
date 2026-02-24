@@ -1,4 +1,4 @@
-name: BikeFit Key-Safe Build
+name: BikeFit V2-Embedding Fix & Build
 
 on:
   workflow_dispatch:
@@ -22,21 +22,29 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔐 V1 에러 방지 및 릴리스 서명 설정
+      - name: 🛠️ V1 Embedding 강제 제거 및 최신화
         run: |
-          # 1. 빌드 캐시 청소
           flutter clean
 
-          # 2. 패키지 경로 및 MainActivity.kt 재생성 (Indoor_bike_fit 프로젝트 기준)
-          find android/app/src/main -name "MainActivity.*" -delete
-          mkdir -p android/app/src/main/kotlin/com/kimro79/indoor_bike_fit
-          cat <<EOF > android/app/src/main/kotlin/com/kimro79/indoor_bike_fit/MainActivity.kt
+          # 1. 패키지 경로 설정 (사용자님의 실제 패키지명 적용)
+          PACKAGE_PATH="android/app/src/main/kotlin/com/kimro79/indoor_bike_fit"
+          mkdir -p $PACKAGE_PATH
+
+          # 2. V1 에러의 주범인 MainActivity를 최신 V2 코드로 교체
+          cat <<EOF > $PACKAGE_PATH/MainActivity.kt
           package com.kimro79.indoor_bike_fit
           import io.flutter.embedding.android.FlutterActivity
           class MainActivity: FlutterActivity()
           EOF
 
-          # 3. key.properties 생성 (android/app/ 경로의 jks 참조)
+          # 3. AndroidManifest.xml에서 V1 관련 메타데이터 강제 삭제 및 수정
+          # 이 과정이 없으면 계속 V1 에러가 발생합니다.
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          sed -i '/android:name="io.flutter.app.FlutterApplication"/d' $MANIFEST
+          sed -i '/io.flutter.embedding.android.NormalThemes/d' $MANIFEST
+          sed -i '/io.flutter.embedding.android.SplashScreenDrawable/d' $MANIFEST
+
+          # 4. key.properties 생성 (Sodomaki80 비밀번호 적용)
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -44,18 +52,18 @@ jobs:
           storeFile=release.jks
           EOF
 
-          # 4. build.gradle 설정 강제 수정 (V1 에러 방지를 위해 release 서명 강제 적용)
+          # 5. 서명 설정 강제 적용
           if [ -f "android/app/build.gradle" ]; then
             sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           fi
 
           flutter pub get
 
-      - name: AAB 빌드 실행 (V1/V2 서명 문제를 해결하는 AAB 방식)
+      - name: AAB 빌드 실행 (V2 방식으로 빌드)
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: ★최종 AAB 파일 다운로드★
+      - name: ★최종 결과물 다운로드★
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_FINAL_AAB
+          name: BikeFit_V2_Fixed_AAB
           path: build/app/outputs/bundle/release/app-release.aab
