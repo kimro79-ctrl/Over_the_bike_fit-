@@ -1,4 +1,5 @@
 name: BikeFit Key-Safe Build
+
 on:
   workflow_dispatch:
 
@@ -14,48 +15,48 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔐 [키 고정 및 빌드 방해 요소만 제거]
+      - name: 🔐 업로드된 release.jks 연결 및 빌드 설정
         run: |
           # 1. 빌드 캐시 청소
           flutter clean
-          
-          # 2. [빌드 성공용] 에러 주범 MainActivity만 교체 (v1 import 방지)
-          # 사용자님의 패키지명 com.overthebike.over_the_bike_fit
+
+          # 2. 패키지 경로 및 MainActivity.kt 재생성 (프로젝트명 맞춤)
           find android/app/src/main -name "MainActivity.*" -delete
-          mkdir -p android/app/src/main/kotlin/com/overthebike/over_the_bike_fit
-          cat <<EOF > android/app/src/main/kotlin/com/overthebike/over_the_bike_fit/MainActivity.kt
-          package com.overthebike.over_the_bike_fit
+          mkdir -p android/app/src/main/kotlin/com/kimro79/indoor_bike_fit
+          cat <<EOF > android/app/src/main/kotlin/com/kimro79/indoor_bike_fit/MainActivity.kt
+          package com.kimro79.indoor_bike_fit
           import io.flutter.embedding.android.FlutterActivity
           class MainActivity: FlutterActivity()
           EOF
 
-          # 3. [키 고정] 사용자님이 옮긴 release.jks를 절대적으로 사용
-          # 새로 생성하는 명령어(keytool)가 없으므로 기존 키가 유지됩니다.
+          # 3. key.properties 생성
+          # 사용자님이 넣으신 위치가 android/app/ 이므로 경로를 release.jks로 설정합니다.
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
           keyAlias=fresh-upload-key
           storeFile=release.jks
           EOF
-          
-          # 4. 릴리스 서명 강제 적용
+
+          # 4. build.gradle 설정 강제 수정
+          # debug 서명을 release 서명으로 변경하여 실제 출시용 서명이 입혀지게 합니다.
           if [ -f "android/app/build.gradle" ]; then
             sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' android/app/build.gradle
           fi
 
           flutter pub get
 
-      - name: AAB 빌드 실행
+      - name: AAB 빌드 실행 (구글 콘솔 업로드용)
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: ★최종 결과물 다운로드★
+      - name: ★최종 AAB 파일 다운로드★
         uses: actions/upload-artifact@v4
         with:
           name: BikeFit_FINAL_AAB
