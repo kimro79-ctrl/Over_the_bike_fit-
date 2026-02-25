@@ -1,4 +1,4 @@
-name: BikeFit Simple V2 Fix
+name: BikeFit OverTheBike FINAL Absolute Fix
 
 on:
   workflow_dispatch:
@@ -7,36 +7,75 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Java & Flutter
+      - name: ☕ Setup Java & Flutter
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Flutter
+      - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🧹 V1 잔재 강제 삭제 및 설정
+      - name: 🔥 [결정적 단계] 안드로이드 폴더 강제 초기화 및 재생성
         run: |
+          # 1. 기존의 모든 안드로이드 잔재 삭제
           flutter clean
-          # 1. 구식 경로 파일 삭제 (에러 방지)
-          rm -rf android/app/src/main/kotlin/com/kimro79
+          rm -rf android
           
-          # 2. MainActivity.kt 생성
-          mkdir -p android/app/src/main/kotlin/com/overthebike/over_the_bike_fit
-          cat <<EOF > android/app/src/main/kotlin/com/overthebike/over_the_bike_fit/MainActivity.kt
-          package com.overthebike.over_the_bike_fit
-          import io.flutter.embedding.android.FlutterActivity
-          class MainActivity: FlutterActivity()
+          # 2. 최신 V2 규격으로 안드로이드 폴더 재구성
+          # 프로젝트 레포 이름과 일치하는 패키지명 적용
+          flutter create . --platforms android --org com.overthebike
+          
+          # 3. 생성된 최신 build.gradle에 서명 정보 및 플러그인 연결 주입
+          # (기존에 누락되었던 핵심 연결 코드를 강제로 넣습니다)
+          cat <<EOF > android/app/build.gradle
+          def keystoreProperties = new Properties()
+          def keystorePropertiesFile = rootProject.file('key.properties')
+          if (keystorePropertiesFile.exists()) {
+              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+          }
+
+          apply plugin: 'com.android.application'
+          apply plugin: 'kotlin-android'
+          apply from: "\$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+
+          android {
+              namespace "com.overthebike.over_the_bike_fit"
+              compileSdkVersion 34
+              defaultConfig {
+                  applicationId "com.overthebike.over_the_bike_fit"
+                  minSdkVersion 21
+                  targetSdkVersion 34
+                  versionCode 4
+                  versionName "1.0.3"
+              }
+              signingConfigs {
+                  release {
+                      keyAlias keystoreProperties['keyAlias']
+                      keyPassword keystoreProperties['keyPassword']
+                      storeFile file(keystoreProperties['storeFile'])
+                      storePassword keystoreProperties['storePassword']
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                      minifyEnabled true
+                      shrinkResources true
+                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                  }
+              }
+          }
+          flutter { source '../..' }
           EOF
 
-          # 3. key.properties 생성
+          # 4. 키스토어 파일 설정 (Sodomaki80)
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -44,6 +83,7 @@ jobs:
           storeFile=release.jks
           EOF
           
+          # 루트에 있는 jks를 새로 만든 android 폴더로 이동
           if [ -f "release.jks" ]; then
             cp release.jks android/app/release.jks
           fi
@@ -53,8 +93,8 @@ jobs:
       - name: 🚀 AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 📦 파일 다운로드
+      - name: 📦 최종 AAB 파일 다운로드
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Fixed_AAB
+          name: OverTheBike_SUCCESS_AAB
           path: build/app/outputs/bundle/release/*.aab
