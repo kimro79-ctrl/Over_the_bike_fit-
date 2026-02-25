@@ -1,4 +1,4 @@
-name: BikeFit OverTheBike FINAL Absolute Fix
+name: BikeFit OverTheBike REAL FINAL SUCCESS
 
 on:
   workflow_dispatch:
@@ -22,28 +22,42 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔥 [결정적 단계] 안드로이드 폴더 강제 초기화 및 재생성
+      - name: 🔥 [결정적 단계] 안드로이드 폴더 재생성 및 Gradle 경로 주입
         run: |
-          # 1. 기존의 모든 안드로이드 잔재 삭제
+          # 1. 기존의 꼬인 안드로이드 폴더 완전 삭제
           flutter clean
           rm -rf android
           
-          # 2. 최신 V2 규격으로 안드로이드 폴더 재구성
-          # 프로젝트 레포 이름과 일치하는 패키지명 적용
+          # 2. 최신 V2 규격으로 안드로이드 폴더 새로 생성
           flutter create . --platforms android --org com.overthebike
           
-          # 3. 생성된 최신 build.gradle에 서명 정보 및 플러그인 연결 주입
-          # (기존에 누락되었던 핵심 연결 코드를 강제로 넣습니다)
+          # 3. local.properties 생성 (flutterRoot 에러 방지의 핵심)
+          # 이 파일이 있어야 build.gradle이 flutterRoot를 인식합니다.
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+          echo "flutter.sdk=$FLUTTER_ROOT" >> android/local.properties
+
+          # 4. 최신 build.gradle 주입 (flutterRoot 정의 보강)
           cat <<EOF > android/app/build.gradle
-          def keystoreProperties = new Properties()
-          def keystorePropertiesFile = rootProject.file('key.properties')
-          if (keystorePropertiesFile.exists()) {
-              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+          def localProperties = new Properties()
+          def localPropertiesFile = rootProject.file('local.properties')
+          if (localPropertiesFile.exists()) {
+              localProperties.load(new FileInputStream(localPropertiesFile))
+          }
+
+          def flutterRoot = localProperties.getProperty('flutter.sdk')
+          if (flutterRoot == null) {
+              throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
           }
 
           apply plugin: 'com.android.application'
           apply plugin: 'kotlin-android'
           apply from: "\$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+
+          def keystoreProperties = new Properties()
+          def keystorePropertiesFile = rootProject.file('key.properties')
+          if (keystorePropertiesFile.exists()) {
+              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+          }
 
           android {
               namespace "com.overthebike.over_the_bike_fit"
@@ -75,7 +89,7 @@ jobs:
           flutter { source '../..' }
           EOF
 
-          # 4. 키스토어 파일 설정 (Sodomaki80)
+          # 5. 키스토어 설정 (Sodomaki80)
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -83,7 +97,6 @@ jobs:
           storeFile=release.jks
           EOF
           
-          # 루트에 있는 jks를 새로 만든 android 폴더로 이동
           if [ -f "release.jks" ]; then
             cp release.jks android/app/release.jks
           fi
@@ -96,5 +109,5 @@ jobs:
       - name: 📦 최종 AAB 파일 다운로드
         uses: actions/upload-artifact@v4
         with:
-          name: OverTheBike_SUCCESS_AAB
+          name: OverTheBike_FINAL_SUCCESS_AAB
           path: build/app/outputs/bundle/release/*.aab
