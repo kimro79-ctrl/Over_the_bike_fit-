@@ -1,4 +1,4 @@
-name: BikeFit REAL FINAL SUCCESS (Artifact Fix)
+name: BikeFit OverTheBike ABSOLUTE SUCCESS
 
 on:
   workflow_dispatch:
@@ -22,12 +22,18 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔥 안드로이드 구조 최적화 및 V1 삭제
+      - name: 🔥 [결정적 단계] V1 폴더 물리적 소탕
         run: |
           flutter clean
+          
+          # 1. 패키지 경로 설정
           PACKAGE_NAME="com.overthebike.over_the_bike_fit"
           PACKAGE_PATH="android/app/src/main/kotlin/com/overthebike/over_the_bike_fit"
-          rm -rf android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+          
+          # 2. V1 에러를 유발하는 java 폴더 자체를 삭제 (kotlin만 사용)
+          rm -rf android/app/src/main/java
+          
+          # 3. MainActivity.kt V2 전용 생성
           mkdir -p $PACKAGE_PATH
           cat <<EOF > $PACKAGE_PATH/MainActivity.kt
           package $PACKAGE_NAME
@@ -35,23 +41,26 @@ jobs:
           class MainActivity: FlutterActivity()
           EOF
 
-      - name: 🛠️ 빌드 환경 설정 (SDK 35)
+      - name: 🛠️ 빌드 환경 강제 고정 (SDK 35 & V2 선언)
         run: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
           echo "flutter.sdk=$FLUTTER_ROOT" >> android/local.properties
-          
-          # build.gradle 설정
+
+          # build.gradle 주입
           cat <<EOF > android/app/build.gradle
           def localProperties = new Properties()
           def localPropertiesFile = rootProject.file('local.properties')
           if (localPropertiesFile.exists()) { localProperties.load(new FileInputStream(localPropertiesFile)) }
           def flutterRoot = localProperties.getProperty('flutter.sdk')
+
           apply plugin: 'com.android.application'
           apply plugin: 'kotlin-android'
           apply from: "\$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+
           def keystoreProperties = new Properties()
           def keystorePropertiesFile = rootProject.file('key.properties')
           if (keystorePropertiesFile.exists()) { keystoreProperties.load(new FileInputStream(keystorePropertiesFile)) }
+
           android {
               namespace "com.overthebike.over_the_bike_fit"
               compileSdkVersion 35
@@ -72,7 +81,13 @@ jobs:
                       storePassword keystoreProperties['storePassword']
                   }
               }
-              buildTypes { release { signingConfig signingConfigs.release; minifyEnabled true; shrinkResources true } }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                      minifyEnabled true
+                      shrinkResources true
+                  }
+              }
           }
           flutter { source '../..' }
           EOF
@@ -84,19 +99,18 @@ jobs:
           keyAlias=fresh-upload-key
           storeFile=release.jks
           EOF
+          
           flutter pub get
 
-      - name: 🚀 AAB 빌드 실행
+      - name: 🚀 AAB 빌드 실행 (마지막 V1 체크 차단)
         run: |
-          rm -f android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+          # 💡 [핵심] 빌드 직전에 다시 생성되었을지 모를 V1 폴더를 한 번 더 날립니다.
+          rm -rf android/app/src/main/java
           flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 📦 [핵심] 빌드 파일 위치 확인 및 업로드
+      - name: 📦 [성공] AAB 파일 다운로드
         uses: actions/upload-artifact@v4
         with:
           name: OverTheBike_Final_AAB
-          # 경로를 더 포괄적으로 설정하여 파일을 놓치지 않게 합니다.
-          path: |
-            build/app/outputs/bundle/release/*.aab
-            build/app/outputs/flutter-apk/*.apk
+          path: build/app/outputs/bundle/release/*.aab
           if-no-files-found: error
