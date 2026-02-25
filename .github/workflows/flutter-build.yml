@@ -1,4 +1,4 @@
-name: BikeFit FINAL AAB Build (for Google Play Upload)
+name: BikeFit AAB Build - Auto V2 Migration
 
 on:
   workflow_dispatch:
@@ -6,45 +6,128 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: 📥 Checkout source
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: ☕ Setup Java & Flutter
+      - name: Setup JDK
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 🐦 Setup Flutter
+      - name: Setup Flutter 3.19.6
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.19.6'
           channel: 'stable'
 
-      - name: 🧹 Clean & Fetch Dependencies
+      - name: Print pubspec name
         run: |
+          echo "pubspec name:"
+          sed -n '1,20p' pubspec.yaml
+
+      - name: Backup and remove android, clean caches
+        run: |
+          echo "Backing up android if exists..."
+          if [ -d "android" ]; then
+            mv android android_backup_$(date +%s)
+          fi
           flutter clean
+          rm -rf ~/.pub-cache || true
+
+      - name: Regenerate project (flutter create . -> V2 android)
+        run: |
+          echo "Regenerating project with flutter create ."
+          flutter create .
+          echo "Created android folder; verifying MainActivity and manifest..."
+          ls -R android | head -n 200
+
+      - name: Ensure MainActivity is V2 (overwrite to be safe)
+        run: |
+          mkdir -p android/app/src/main/kotlin/com/overthebike/over_the_bike_fit
+          cat > android/app/src/main/kotlin/com/overthebike/over_the_bike_fit/MainActivity.kt <<'KOT'
+          package com.overthebike.over_the_bike_fit
+          import io.flutter.embedding.android.FlutterActivity
+          class MainActivity: FlutterActivity() {}
+          KOT
+
+      - name: Ensure AndroidManifest has embedding v2 meta-data
+        run: |
+          cat > android/app/src/main/AndroidManifest.xml <<'MAN'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="com.overthebike.over_the_bike_fit">
+              <application
+                  android:label="over_the_bike_fit"
+                  android:name="${applicationName}"
+                  android:icon="@mipmap/ic_launcher">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:launchMode="singleTop"
+                      android:theme="@style/LaunchTheme"
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|screenLayout|density|fontScale"
+                      android:hardwareAccelerated="true"
+                      android:windowSoftInputMode="adjustResize">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+                  <meta-data android:name="flutterEmbedding" android:value="2" />
+              </application>
+          </manifest>
+          MAN
+
+      - name: Show any legacy registerWith in pub-cache (diagnose)
+        run: |
+          echo "Searching for legacy registerWith files in pub cache..."
+          if [ -d "$HOME/.pub-cache" ]; then
+            grep -R --line-number "registerWith" $HOME/.pub-cache || echo "No registerWith found in pub-cache"
+          else
+            echo "No pub-cache found"
+          fi
+
+      - name: (Optional) Patch pub-cache registerWith -> ignoredRegisterWith
+        if: always()
+        run: |
+          echo "Patching any registerWith in pub-cache (backup files with .bak)..."
+          if [ -d "$HOME/.pub-cache" ]; then
+            find $HOME/.pub-cache -type f -name "*.java" -o -name "*.kt" | xargs grep -l "registerWith" 2>/dev/null | tee /tmp/v1list || true
+            if [ -s /tmp/v1list ]; then
+              while read file; do
+                cp "$file" "${file}.bak" || true
+                sed -i 's/registerWith/ignoredRegisterWith/g' "$file" || true
+                echo "patched: $file"
+              done < /tmp/v1list
+            else
+              echo "No registerWith occurrences to patch"
+            fi
+          else
+            echo "No pub-cache directory to patch"
+          fi
+
+      - name: Fetch dependencies
+        run: |
           flutter pub get
 
-      - name: 🔐 Setup Keystore
+      - name: Setup keystore
         run: |
-          echo "🔑 Creating key.properties..."
-          cat <<EOF > android/key.properties
+          cat > android/key.properties <<'PROP'
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
           keyAlias=fresh-upload-key
           storeFile=release.jks
-          EOF
-          cp $GITHUB_WORKSPACE/release.jks android/app/release.jks
+          PROP
+          if [ -f "$GITHUB_WORKSPACE/release.jks" ]; then
+            cp $GITHUB_WORKSPACE/release.jks android/app/release.jks
+          fi
 
-      - name: 🚀 Build Signed AAB
+      - name: Build AAB
         run: |
-          echo "🚀 Building release AAB..."
           flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 📦 Upload AAB Artifact
+      - name: Upload aab artifact
         uses: actions/upload-artifact@v4
         with:
           name: over_the_bike_fit_RELEASE_AAB
