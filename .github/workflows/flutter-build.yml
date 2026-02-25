@@ -1,4 +1,4 @@
-name: BikeFit OverTheBike FINAL Clean Build
+name: BikeFit OverTheBike FINAL Absolute Fix
 
 on:
   workflow_dispatch:
@@ -6,7 +6,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -23,20 +22,20 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🧹 환경 초기화 및 V1 잔재 소탕
+      - name: 🔥 [긴급] 안드로이드 V1 잔재 파괴 및 V2 강제 개조
         run: |
-          echo "🧼 Cleaning build and cache..."
+          echo "🧼 Cleaning previous build state..."
           flutter clean
           
-          # 패키지명 설정 (over_the_bike_fit)
           PACKAGE_NAME="com.overthebike.over_the_bike_fit"
           PACKAGE_PATH="android/app/src/main/kotlin/com/overthebike/over_the_bike_fit"
-          
-          # 기존의 꼬인 안드로이드 파일들 삭제
+
+          # 1. 구식 파일 및 경로 완전 삭제
           rm -rf android/app/src/main/kotlin/com/kimro79
+          rm -rf android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
           find android/app/src/main -name "MainActivity.*" -delete
 
-          # 최신 V2 MainActivity.kt 생성
+          # 2. 최신 V2 MainActivity.kt 생성
           mkdir -p $PACKAGE_PATH
           cat <<EOF > $PACKAGE_PATH/MainActivity.kt
           package $PACKAGE_NAME
@@ -44,7 +43,7 @@ jobs:
           class MainActivity: FlutterActivity()
           EOF
 
-          # AndroidManifest.xml 최신화 (V2 강제 및 패키지명 적용)
+          # 3. AndroidManifest.xml 완전 재작성 (V1 Application 클래스 제거 핵심)
           cat <<EOF > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
               package="$PACKAGE_NAME">
@@ -65,37 +64,39 @@ jobs:
                           <category android:name="android.intent.category.LAUNCHER"/>
                       </intent-filter>
                   </activity>
-                  <meta-data android:name="flutterEmbedding" android:value="2" />
+                  <meta-data
+                      android:name="flutterEmbedding"
+                      android:value="2" />
               </application>
           </manifest>
           EOF
 
-      - name: 🧰 플러그인 V1 코드 강제 패치
+          # 4. build.gradle 내 패키지명 강제 통일
+          sed -i "s/applicationId \".*\"/applicationId \"$PACKAGE_NAME\"/g" android/app/build.gradle
+          sed -i "s/namespace \".*\"/namespace \"$PACKAGE_NAME\"/g" android/app/build.gradle
+
+      - name: 🧰 플러그인 의존성 강제 복구
         run: |
-          echo "📦 Repairing pub cache and patching legacy codes..."
+          echo "📦 Fixing pub cache and dependencies..."
           flutter pub cache repair || true
-          # 외부 플러그인에 숨은 V1 코드(registerWith)를 무력화하여 V2 빌드 유도
+          # 구식 registerWith 호출을 무력화하여 V2 호환성 강제 확보
           find $HOME/.pub-cache -type f -name "*.java" -print0 | xargs -0 sed -i 's/registerWith/ignoredRegisterWith/g' || true
           flutter pub get
 
-      - name: 🔐 Keystore 및 build.gradle 설정
+      - name: 🔐 Keystore 설정
         run: |
-          echo "🔑 Setting up key.properties..."
+          echo "🔑 Setting up keystore..."
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
           keyAlias=fresh-upload-key
           storeFile=release.jks
           EOF
-
-          # JKS 파일 복사 확인
+          
+          # JKS 파일 위치 확인 및 복사
           if [ -f "release.jks" ]; then
             cp release.jks android/app/release.jks
           fi
-
-          # build.gradle 내 패키지명 강제 업데이트
-          sed -i "s/applicationId \".*\"/applicationId \"com.overthebike.over_the_bike_fit\"/g" android/app/build.gradle
-          sed -i "s/namespace \".*\"/namespace \"com.overthebike.over_the_bike_fit\"/g" android/app/build.gradle
 
       - name: 🚀 AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
@@ -103,5 +104,5 @@ jobs:
       - name: 📦 최종 AAB 파일 다운로드
         uses: actions/upload-artifact@v4
         with:
-          name: OverTheBike_FINAL_AAB
+          name: OverTheBike_V2_FIXED_AAB
           path: build/app/outputs/bundle/release/*.aab
