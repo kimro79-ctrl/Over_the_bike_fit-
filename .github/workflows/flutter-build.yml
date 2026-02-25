@@ -1,4 +1,4 @@
-name: BikeFit FINAL AAB Build (for Google Play Upload)
+name: BikeFit OverTheBike FINAL Clean Build
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout source
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
       - name: ☕ Setup Java & Flutter
@@ -17,36 +17,91 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 🐦 Setup Flutter (안정판)
+      - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.6'
+          flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🧹 Clean & Fetch Dependencies
+      - name: 🧹 환경 초기화 및 V1 잔재 소탕
         run: |
-          echo "🧹 Cleaning project and fetching dependencies..."
+          echo "🧼 Cleaning build and cache..."
           flutter clean
+          
+          # 패키지명 설정 (over_the_bike_fit)
+          PACKAGE_NAME="com.overthebike.over_the_bike_fit"
+          PACKAGE_PATH="android/app/src/main/kotlin/com/overthebike/over_the_bike_fit"
+          
+          # 기존의 꼬인 안드로이드 파일들 삭제
+          rm -rf android/app/src/main/kotlin/com/kimro79
+          find android/app/src/main -name "MainActivity.*" -delete
+
+          # 최신 V2 MainActivity.kt 생성
+          mkdir -p $PACKAGE_PATH
+          cat <<EOF > $PACKAGE_PATH/MainActivity.kt
+          package $PACKAGE_NAME
+          import io.flutter.embedding.android.FlutterActivity
+          class MainActivity: FlutterActivity()
+          EOF
+
+          # AndroidManifest.xml 최신화 (V2 강제 및 패키지명 적용)
+          cat <<EOF > android/app/src/main/AndroidManifest.xml
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="$PACKAGE_NAME">
+              <application
+                  android:label="over_the_bike_fit"
+                  android:name="\${applicationName}"
+                  android:icon="@mipmap/ic_launcher">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:launchMode="singleTop"
+                      android:theme="@style/LaunchTheme"
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|screenLayout|density|fontScale"
+                      android:hardwareAccelerated="true"
+                      android:windowSoftInputMode="adjustResize">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+                  <meta-data android:name="flutterEmbedding" android:value="2" />
+              </application>
+          </manifest>
+          EOF
+
+      - name: 🧰 플러그인 V1 코드 강제 패치
+        run: |
+          echo "📦 Repairing pub cache and patching legacy codes..."
+          flutter pub cache repair || true
+          # 외부 플러그인에 숨은 V1 코드(registerWith)를 무력화하여 V2 빌드 유도
+          find $HOME/.pub-cache -type f -name "*.java" -print0 | xargs -0 sed -i 's/registerWith/ignoredRegisterWith/g' || true
           flutter pub get
 
-      - name: 🔐 Setup Keystore for Release
+      - name: 🔐 Keystore 및 build.gradle 설정
         run: |
-          echo "🔑 Creating key.properties..."
+          echo "🔑 Setting up key.properties..."
           cat <<EOF > android/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
           keyAlias=fresh-upload-key
           storeFile=release.jks
           EOF
-          cp $GITHUB_WORKSPACE/release.jks android/app/release.jks
 
-      - name: 🚀 Build Signed AAB
-        run: |
-          echo "🚀 Building final signed AAB for over_the_bike_fit..."
-          flutter build appbundle --release --no-tree-shake-icons
+          # JKS 파일 복사 확인
+          if [ -f "release.jks" ]; then
+            cp release.jks android/app/release.jks
+          fi
 
-      - name: 📦 Upload AAB Artifact
+          # build.gradle 내 패키지명 강제 업데이트
+          sed -i "s/applicationId \".*\"/applicationId \"com.overthebike.over_the_bike_fit\"/g" android/app/build.gradle
+          sed -i "s/namespace \".*\"/namespace \"com.overthebike.over_the_bike_fit\"/g" android/app/build.gradle
+
+      - name: 🚀 AAB 빌드 실행
+        run: flutter build appbundle --release --no-tree-shake-icons
+
+      - name: 📦 최종 AAB 파일 다운로드
         uses: actions/upload-artifact@v4
         with:
-          name: over_the_bike_fit_RELEASE_AAB
+          name: OverTheBike_FINAL_AAB
           path: build/app/outputs/bundle/release/*.aab
