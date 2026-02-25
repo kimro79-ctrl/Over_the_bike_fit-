@@ -11,16 +11,18 @@ if (localPropertiesFile.exists()) {
 }
 
 def flutterRoot = localProperties.getProperty('flutter.sdk')
+if (flutterRoot == null) {
+    throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
+}
 
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
+// ⭐ 이 줄이 빠지면 무조건 V1 에러가 납니다.
 apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 
 android {
     namespace "com.overthebike.over_the_bike_fit"
     compileSdkVersion 34
-
-    ndkVersion "26.1.10909125" // Flutter 3.27.1 기준 Android NDK 버전
 
     defaultConfig {
         applicationId "com.overthebike.over_the_bike_fit"
@@ -28,16 +30,6 @@ android {
         targetSdkVersion 34
         versionCode 4
         versionName "1.0.3"
-        multiDexEnabled true
-    }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = "17"
     }
 
     signingConfigs {
@@ -56,15 +48,6 @@ android {
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
-        debug {
-            signingConfig signingConfigs.release
-        }
-    }
-
-    packagingOptions {
-        resources {
-            excludes += ['META-INF/LICENSE', 'META-INF/NOTICE']
-        }
     }
 }
 
@@ -74,8 +57,4 @@ flutter {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-
-    // 필수: V2 embedding 대응용 AndroidX 라이브러리
-    implementation 'androidx.multidex:multidex:2.0.1'
-    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
 }
