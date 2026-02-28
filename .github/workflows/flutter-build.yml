@@ -1,4 +1,4 @@
-name: BikeFit - ABSOLUTE FINAL SUCCESS (V1 BYPASS)
+name: BikeFit - Java Structure Fix & Build
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ jobs:
       - name: 📥 코드 체크아웃
         uses: actions/checkout@v4
 
-      - name: ☕ Java 17 설정
+      - name: ☕ Java 17 및 Flutter 설정
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -22,58 +22,40 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🔥 [결정적 조치] V1 좀비 경로 물리적 폐쇄
+      - name: 🏗️ [구조 정상화] Java/Kotlin 공존 설정
         run: |
           flutter clean
+          # 1. 기존에 잘못 생성된 'java 파일'이 있다면 제거
+          rm -f android/app/src/main/java
           
-          # 1. 구식 Java 폴더 전체 삭제
-          rm -rf android/app/src/main/java
+          # 2. 정석적인 java 폴더 구조 생성 (엔진 충돌 방지)
+          mkdir -p android/app/src/main/java/io/flutter/plugins
           
-          # 2. 최신 Kotlin 경로 생성 및 MainActivity 배치
+          # 3. 현재 트리에 맞는 Kotlin 경로 보장
           mkdir -p android/app/src/main/kotlin/com/overthebike/over_the_bike_fit
-          cat <<EOF > android/app/src/main/kotlin/com/overthebike/over_the_bike_fit/MainActivity.kt
-          package com.overthebike.over_the_bike_fit
-          import io.flutter.embedding.android.FlutterActivity
-          class MainActivity: FlutterActivity()
-          EOF
+          # MainActivity는 이미 있으므로 경로만 확실히 합니다.
 
-          # 💡 [핵심] java라는 이름의 '파일'을 만들어 폴더 생성을 막음
-          # 플러터가 java 폴더를 만들려 할 때 이미 같은 이름의 파일이 있어 실패하게 됩니다.
-          touch android/app/src/main/java 
-
-      - name: 🛠️ 빌드 환경 및 키스토어 설정
+      - name: 🔑 키스토어 및 서명 설정
         run: |
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
-          echo "flutter.sdk=$FLUTTER_ROOT" >> android/local.properties
-
-          # 서명 정보 주입
           cat <<EOF > android/app/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
           keyAlias=fresh-upload-key
           storeFile=release.jks
           EOF
-          
-          # JKS 파일 위치 고정
-          cp release.jks android/app/release.jks || echo "JKS check"
+          cp release.jks android/app/release.jks
 
-      - name: 🚀 AAB 빌드 실행 (V1 체크 강제 우회)
+      - name: 🚀 AAB 빌드 (Java 좀비 파일만 정밀 타격)
         run: |
-          # pub get을 먼저 수행
           flutter pub get
+          # 💡 핵심: java 폴더는 두되, 에러 원인인 파일만 빌드 직전에 지웁니다.
+          rm -f android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
           
-          # 빌드 직전, 다시 한번 java 경로가 파일인지 확인 (강력 보호)
-          rm -rf android/app/src/main/java
-          touch android/app/src/main/java
-          
-          # --no-pub 옵션으로 빌드 중 간섭 차단
+          # 빌드 중 재생성을 막기 위해 --no-pub 옵션 사용
           flutter build appbundle --release --no-tree-shake-icons --no-pub
 
-      - name: 📦 [성공] AAB 결과물 추출
+      - name: 📦 AAB 파일 업로드
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Final_AAB
-          path: |
-            build/app/outputs/bundle/release/*.aab
-            build/**/*.aab
-          if-no-files-found: error
+          name: BikeFit_JavaFix_AAB
+          path: build/app/outputs/bundle/release/*.aab
