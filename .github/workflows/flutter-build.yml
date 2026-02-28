@@ -1,4 +1,4 @@
-name: BikeFit - ABSOLUTE FINAL SUCCESS (V1 BYPASS)
+name: BikeFit - FINAL FORCED BUILD SUCCESS
 
 on:
   workflow_dispatch:
@@ -22,22 +22,23 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🏗️ [구조 정상화] Java/Kotlin 경로 최적화
+      - name: 🏗️ [1단계] 사용자님 제안: V1 정밀 타격 및 경로 청소
         run: |
           flutter clean
-          # 1. 기존의 잘못된 'java 파일'이 있다면 확실히 제거
-          rm -rf android/app/src/main/java
+          # 1. 모든 위치에서 GeneratedPluginRegistrant 관련 파일 제거
+          find . -name "*GeneratedPluginRegistrant*" -exec rm -rf {} + || true
           
-          # 2. 정석적인 Java 패키지 경로 생성
+          # 2. 정석적인 Java/Kotlin 경로 확보
           mkdir -p android/app/src/main/java/io/flutter/plugins
-          
-          # 💡 [핵심 전략] 에러 파일이 생성될 자리에 미리 '폴더'를 만들어 생성을 방해함
-          # 파일이 생성되려 할 때 "이미 같은 이름의 디렉토리가 있음" 에러를 내며 생성이 무산됩니다.
+          mkdir -p android/app/src/main/kotlin/com/overthebike/over_the_bike_fit
+
+          # 💡 [핵심 보완] 파일 생성을 원천 차단하기 위해 '동일 이름의 폴더' 생성
+          # 이렇게 하면 엔진이 파일을 쓰고 싶어도 "같은 이름의 폴더가 있어 실패"하게 됩니다.
           mkdir -p android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
 
-      - name: 🔑 [성공] 키스토어 및 서명 설정
+      - name: 🔑 [2단계] 키스토어 및 서명 설정 (루트 경로 활용)
         run: |
-          # 루트에 있는 release.jks를 활용
+          # 루트에 있는 release.jks를 복사
           cp release.jks android/app/release.jks
           
           cat <<EOF > android/app/key.properties
@@ -47,19 +48,19 @@ jobs:
           storeFile=release.jks
           EOF
 
-      - name: 🚀 AAB 빌드 실행 (V1 우회 필살기)
+      - name: 🚀 [3단계] 필살기: AAB 빌드 실행 (V1 우회)
         run: |
+          # pub get 단계에서 생기는 쓰레기들 차단
           flutter pub get
           
-          # 빌드 직전, 다시 한 번 해당 경로가 디렉토리인지 확인 (강력 보호)
-          # 만약 파일로 생겨났다면 삭제하고 다시 디렉토리로 만듭니다.
+          # 빌드 직전, 다시 한번 가짜 폴더 '알박기' 확인
           rm -f android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
           mkdir -p android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
           
-          # --no-pub으로 빌드 중 엔진의 파일 간섭 차단
+          # --no-pub 옵션을 써서 빌드 중 파일 생성을 막습니다
           flutter build appbundle --release --no-tree-shake-icons --no-pub
 
-      - name: 📦 [완료] AAB 결과물 추출
+      - name: 📦 [성공] AAB 결과물 추출
         uses: actions/upload-artifact@v4
         with:
           name: BikeFit_Final_AAB
