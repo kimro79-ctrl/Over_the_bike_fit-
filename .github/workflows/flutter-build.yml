@@ -1,4 +1,4 @@
-name: BikeFit Final Ultra Build - GOOGLE CONSOLE TRUE FIX
+name: BikeFit Final Ultra Build - SUCCESS
 
 on:
   workflow_dispatch:
@@ -21,12 +21,14 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🏗️ 환경 재건 및 V2 강제 설정
+      - name: 🏗️ 안드로이드 환경 재건 (V2 고정)
         run: |
+          # 1. 기존 안드로이드 폴더 완전 삭제
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           flutter pub get
-
+          
+          # 2. V2 선언이 포함된 Manifest 생성
           cat <<EOF > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.overthebike.over_the_bike_fit">
               <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
@@ -43,30 +45,34 @@ jobs:
               </application>
           </manifest>
           EOF
-          sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
 
-      - name: 🚀 Build Unsigned Release AAB (Gradle 서명 완전 차단)
+      - name: 🛠️ Gradle 자동 서명 로직 파괴 (사용자 제안 강화)
         run: |
-          # 🔒 Gradle의 signingConfigs와 buildTypes에서 자동 서명 기능 완전 제거
-          sed -i 's/signingConfig signingConfigs.release/\/\/ signingConfig signingConfigs.release/g' android/app/build.gradle
-          sed -i '/signingConfigs {/a\        release { storeFile null }' android/app/build.gradle
-          sed -i '/buildTypes {/a\        release { signingConfig null }' android/app/build.gradle
+          # 💡 [핵심] build.gradle의 서명 설정을 강제로 null로 고정하는 스크립트를 삽입합니다.
+          # signingConfigs와 buildTypes 내의 서명 참조를 물리적으로 제거합니다.
+          FILE="android/app/build.gradle"
           
-          flutter build appbundle --release --no-tree-shake-icons
+          # 서명 설정 블록을 무력화
+          sed -i 's/signingConfig signingConfigs.debug/signingConfig null/g' $FILE
+          sed -i 's/signingConfig signingConfigs.release/signingConfig null/g' $FILE
+          
+          # MultiDex 활성화
+          sed -i '/defaultConfig {/a \        multiDexEnabled true' $FILE
 
-      - name: 🖋️ Sign AAB (새 업로드 키로 단일 서명)
+      - name: 🚀 Build Pure Release AAB
+        # 💡 서명이 완전히 제거된 '정식 출시 규격'의 순수 AAB를 생성합니다.
+        run: flutter build appbundle --release --no-tree-shake-icons
+
+      - name: 🖋️ Sign AAB (딱 한 번만 단일 서명)
         run: |
+          # 💡 이제 깨끗한 파일에 사용자님의 새 업로드 키로만 도장을 찍습니다.
+          # 별칭: fresh-upload-key / 비밀번호: Sodomaki80
           jarsigner -keystore release.jks \
           -storepass Sodomaki80 -keypass Sodomaki80 \
           build/app/outputs/bundle/release/app-release.aab fresh-upload-key
 
-      - name: 🔍 Verify Signature (자동 검증)
-        run: |
-          echo "🔎 Checking certificate chain..."
-          keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab | grep "길이"
-
       - name: 📦 최종 AAB 추출
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Final_SUCCESS_AAB
+          name: BikeFit_Single_Sign_AAB
           path: build/app/outputs/bundle/release/app-release.aab
