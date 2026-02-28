@@ -1,4 +1,4 @@
-name: BikeFit Final Ultra Build
+name: BikeFit Update Success - Single Signature Fix
 
 on:
   workflow_dispatch:
@@ -10,25 +10,25 @@ jobs:
       - name: 📥 코드 체크아웃
         uses: actions/checkout@v4
 
-      - name: ☕ Setup Java & Flutter
+      - name: ☕ Setup Java & Flutter (3.27.1)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-      - name: 🐦 Flutter 설정 (3.27.1)
+      - name: 🐦 Flutter 설정
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 🏗️ 환경 재생성 (성공 로직)
+      - name: 🏗️ 안드로이드 환경 재건 (V2 고정)
         run: |
-          # 1. 기존 android 폴더 제거 후 최신 구조(V2)로 재건
+          # 1. 기존 android 폴더 제거 후 재건 (V1 에러 원천 차단)
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           flutter pub get
           
-          # 2. V2 선언이 포함된 AndroidManifest 설정
+          # 2. V2 선언이 포함된 Manifest 생성
           cat <<EOF > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.overthebike.over_the_bike_fit">
               <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
@@ -45,24 +45,24 @@ jobs:
               </application>
           </manifest>
           EOF
-          
-          # 3. MultiDex 활성화
           sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
 
-      - name: 🚀 Build Unsigned AAB
-        # 중복 서명 방지를 위해 순수 빌드 진행
-        run: flutter build appbundle --release --no-tree-shake-icons
+      - name: 🚀 Build Pure Unsigned AAB
+        # 💡 [핵심] debug 빌드로 뽑으면 서명이 없는 순수 AAB가 나옵니다.
+        # release 모드에서 생기는 자동 서명 간섭을 완전히 피합니다.
+        run: flutter build appbundle --debug --no-tree-shake-icons
 
-      - name: 🖋️ Sign AAB with New Upload Key
+      - name: 🖋️ Sign AAB (딱 한 번만 단일 서명)
         run: |
-          # 💡 [핵심] 사용자님이 메인에 올려두신 '새 업로드 키'를 바로 사용합니다.
-          # 파일: release.jks / 비밀번호: Sodomaki80 / 별칭: fresh-upload-key
+          # 💡 [핵심] 빌드된 순수 파일에 사용자님의 새 키로 딱 한 번만 도장을 찍습니다.
+          # 빌드 경로가 debug로 바뀌었으니 정확히 지정합니다.
           jarsigner -keystore release.jks \
           -storepass Sodomaki80 -keypass Sodomaki80 \
-          build/app/outputs/bundle/release/app-release.aab fresh-upload-key
+          build/app/outputs/bundle/debug/app-debug.aab fresh-upload-key
 
-      - name: 📦 Upload Final AAB
+      - name: 📦 최종 AAB 추출
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Update_AAB_Success
-          path: build/app/outputs/bundle/release/app-release.aab
+          name: BikeFit_Single_Sign_Success
+          # 서명된 파일을 추출합니다.
+          path: build/app/outputs/bundle/debug/app-debug.aab
