@@ -23,7 +23,7 @@ jobs:
 
       - name: 🏗️ 환경 재건 및 V2 강제 설정
         run: |
-          # 1. 기존 안드로이드 폴더 삭제 후 최신 구조로 재생성
+          # 1. 기존 안드로이드 폴더 삭제 후 재생성 (V1 에러 근본 차단)
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           flutter pub get
@@ -45,13 +45,11 @@ jobs:
               </application>
           </manifest>
           EOF
-          # MultiDex 지원 추가
           sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
 
       - name: 🚀 Build Pure Release AAB (사용자 제안: 서명 완전 차단)
         run: |
-          # 💡 [근본 대책] Gradle 설정에서 서명 관련 항목을 null로 강제 치환합니다.
-          # 이 작업으로 인해 플러터 빌드 중 발생하는 자동 서명이 원천 봉쇄됩니다.
+          # 💡 [핵심] Gradle 설정에서 서명 관련 항목을 null로 강제 치환하여 자동 서명을 봉쇄합니다.
           sed -i '/signingConfigs {/,/}/ s/release {/release { storeFile null /' android/app/build.gradle
           sed -i '/buildTypes {/,/}/ s/signingConfig signingConfigs.release/signingConfig null/' android/app/build.gradle
           
