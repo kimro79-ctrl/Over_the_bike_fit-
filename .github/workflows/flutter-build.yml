@@ -1,4 +1,4 @@
-name: BikeFit Final Ultra Build - SUCCESS
+name: BikeFit Final Ultra Build - SIGNATURE FIX
 
 on:
   workflow_dispatch:
@@ -23,12 +23,12 @@ jobs:
 
       - name: 🏗️ 환경 재건 및 V2 강제 설정
         run: |
-          # 1. 기존 안드로이드 잔재 제거
+          # 1. 기존 안드로이드 폴더 완전 삭제
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           flutter pub get
           
-          # 2. V2 선언이 포함된 Manifest 직접 생성
+          # 2. V2 선언이 포함된 Manifest 생성
           cat <<EOF > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.overthebike.over_the_bike_fit">
               <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
@@ -47,14 +47,14 @@ jobs:
           EOF
           sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
 
-      - name: 🚀 Build Unsigned Release AAB
-        # 💡 옵션 에러를 피하기 위해 표준 release 빌드를 수행합니다.
-        # 서명 설정(key.properties)이 없으므로 '서명되지 않은' 정식 AAB가 생성됩니다.
+      - name: 🚀 Build Pure Release AAB
+        # 💡 [핵심] 서명 정보(key.properties)가 없는 상태로 빌드하여 
+        # 플러터 엔진이 자동으로 도장을 찍지 못하게 합니다.
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 🖋️ Sign AAB (새 업로드 키로 단일 서명)
+      - name: 🖋️ Sign AAB (딱 한 번만 단일 서명)
         run: |
-          # 💡 [핵심] 빌드된 순수 release 파일에 사용자님의 새 키로 딱 한 번만 도장을 찍습니다.
+          # 💡 [핵심] 빌드된 순수 release 파일에 사용자님의 새 키로만 도장을 찍습니다.
           # 비밀번호: Sodomaki80 / 별칭: fresh-upload-key
           jarsigner -keystore release.jks \
           -storepass Sodomaki80 -keypass Sodomaki80 \
@@ -63,5 +63,5 @@ jobs:
       - name: 📦 최종 AAB 추출
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Final_SUCCESS_AAB
+          name: BikeFit_Single_Signature_AAB
           path: build/app/outputs/bundle/release/app-release.aab
