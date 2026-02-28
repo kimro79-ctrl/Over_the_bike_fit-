@@ -23,7 +23,7 @@ jobs:
 
       - name: 🏗️ 환경 재건 및 V2 강제 설정
         run: |
-          # 1. 기존 안드로이드 폴더 완전 삭제 (V1 에러 근본 차단)
+          # 1. 기존 안드로이드 폴더 삭제 후 최신 구조로 재생성
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           flutter pub get
@@ -45,19 +45,21 @@ jobs:
               </application>
           </manifest>
           EOF
+          # MultiDex 지원 추가
           sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
 
-      - name: 🚀 Build Pure Release AAB (Gradle 서명 완전 차단)
+      - name: 🚀 Build Pure Release AAB (사용자 제안: 서명 완전 차단)
         run: |
-          # 💡 [핵심] 사용자님 제안 반영: Gradle에서 자동 서명을 원천 봉쇄합니다.
-          sed -i '/signingConfigs {/a\        release { storeFile null }' android/app/build.gradle
-          sed -i '/buildTypes {/a\        release { signingConfig null }' android/app/build.gradle
+          # 💡 [근본 대책] Gradle 설정에서 서명 관련 항목을 null로 강제 치환합니다.
+          # 이 작업으로 인해 플러터 빌드 중 발생하는 자동 서명이 원천 봉쇄됩니다.
+          sed -i '/signingConfigs {/,/}/ s/release {/release { storeFile null /' android/app/build.gradle
+          sed -i '/buildTypes {/,/}/ s/signingConfig signingConfigs.release/signingConfig null/' android/app/build.gradle
           
           flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 🖋️ Sign AAB (딱 한 번만 단일 서명)
+      - name: 🖋️ Sign AAB (새 업로드 키로 단일 서명 수행)
         run: |
-          # 💡 빌드된 순수 release 파일에 사용자님의 새 키로만 도장을 찍습니다.
+          # 💡 [최종 단계] 도장이 없는 깨끗한 release 파일에 사용자님의 새 키로 도장을 찍습니다.
           # 비밀번호: Sodomaki80 / 별칭: fresh-upload-key
           jarsigner -keystore release.jks \
           -storepass Sodomaki80 -keypass Sodomaki80 \
