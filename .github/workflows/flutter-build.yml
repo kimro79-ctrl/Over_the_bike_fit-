@@ -11,7 +11,7 @@ jobs:
       - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: ☕ Java 17 설치
+      - name: ☕ Java 설치
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -22,6 +22,11 @@ jobs:
         with:
           flutter-version: '3.27.1'
           channel: 'stable'
+
+      - name: 🔄 Android 프로젝트 재생성 (V2 강제)
+        run: |
+          rm -rf android
+          flutter create . --platforms=android --org com.overthebike
 
       - name: 📦 패키지 설치
         run: flutter pub get
@@ -39,42 +44,7 @@ jobs:
           storeFile=release.jks
           EOF
 
-      - name: 🏗️ Android Manifest 수정 (V2 embedding)
-        run: |
-          cat <<EOF > android/app/src/main/AndroidManifest.xml
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-              package="com.overthebike.over_the_bike_fit">
-
-              <uses-permission android:name="android.permission.BLUETOOTH_SCAN"/>
-              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
-              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-
-              <application
-                  android:label="Indoor_fit_app"
-                  android:icon="@mipmap/ic_launcher">
-
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true"
-                      android:launchMode="singleTop"
-                      android:theme="@style/LaunchTheme">
-
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN"/>
-                          <category android:name="android.intent.category.LAUNCHER"/>
-                      </intent-filter>
-
-                  </activity>
-
-                  <meta-data
-                      android:name="flutterEmbedding"
-                      android:value="2" />
-
-              </application>
-          </manifest>
-          EOF
-
-      - name: 🚀 Release AAB 빌드
+      - name: 🚀 AAB 빌드
         run: flutter build appbundle --release
 
       - name: 📦 AAB 업로드
