@@ -29,14 +29,16 @@ jobs:
       - name: Verify keystore file
         run: |
           echo "Checking keystore file in repository..."
+          # 직접 업로드하신 android/app/release.jks 파일을 확인합니다.
           ls -la android/app/release.jks
           if [ ! -f android/app/release.jks ]; then
-            echo "ERROR: release.jks not found. Please upload it to android/app/"
+            echo "ERROR: release.jks not found in android/app/"
             exit 1
           fi
 
       - name: Create key.properties
         run: |
+          # 리포지토리의 jks 파일을 사용하여 빌드하도록 설정 파일을 생성합니다.
           cat <<EOF > android/key.properties
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
@@ -44,8 +46,12 @@ jobs:
           storeFile=app/release.jks
           EOF
 
-      - name: Build release AAB
-        run: flutter build appbundle --release --no-pub
+      - name: Clean and Build AAB
+        run: |
+          # 이전 빌드 기록을 지우고 깔끔하게 릴리스 빌드를 시작합니다.
+          flutter clean
+          flutter pub get
+          flutter build appbundle --release
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
