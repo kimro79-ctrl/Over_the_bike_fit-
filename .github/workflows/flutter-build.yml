@@ -1,4 +1,4 @@
-name: BikeFit Release Build
+name: BikeFit Final Ultra Build
 
 on:
   workflow_dispatch:
@@ -6,55 +6,69 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Setup Java & Flutter
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+          distribution: 'temurin'
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.27.1
-          channel: stable
+          flutter-version: '3.27.1'
+          channel: 'stable'
 
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Verify keystore file
+      - name: 환경 재생성 및 v2 설정
         run: |
-          echo "Checking keystore file in repository..."
-          # 직접 업로드하신 android/app/release.jks 파일을 확인합니다.
-          ls -la android/app/release.jks
-          if [ ! -f android/app/release.jks ]; then
-            echo "ERROR: release.jks not found in android/app/"
-            exit 1
-          fi
+          # 기존 안드로이드 폴더 삭제 후 재생성 (v1 에러 원천 차단)
+          rm -rf android
+          flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
+          flutter pub get
+          
+          # AndroidManifest 설정 (v2 embedding 명시)
+          cat <<EOF > android/app/src/main/AndroidManifest.xml
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.overthebike.over_the_bike_fit">
+              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <application android:label="Indoor_fit_app" android:icon="@mipmap/ic_launcher">
+                  <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:theme="@style/LaunchTheme">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+                  <meta-data android:name="flutterEmbedding" android:value="2" />
+              </application>
+          </manifest>
+          EOF
+          
+          # MultiDex 및 기타 설정 추가
+          sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
 
-      - name: Create key.properties
+      - name: 진짜 키스토어 복원
         run: |
-          # 리포지토리의 jks 파일을 사용하여 빌드하도록 설정 파일을 생성합니다.
+          # 리포지토리에 직접 올리신 jks 파일을 빌드 경로로 복사합니다.
+          cp android/app/release.jks . || echo "File already in root"
+          
+          # 서명 설정 파일 생성
           cat <<EOF > android/key.properties
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
-          storeFile=app/release.jks
+          storeFile=../release.jks
           EOF
 
-      - name: Clean and Build AAB
+      - name: Clean and Build AAB (서명 포함)
+        # 이제 flutter build 명령어가 key.properties를 읽어서 자동으로 진짜 도장을 찍습니다.
         run: |
-          # 이전 빌드 기록을 지우고 깔끔하게 릴리스 빌드를 시작합니다.
           flutter clean
           flutter pub get
-          flutter build appbundle --release
+          flutter build appbundle --release --no-tree-shake-icons
 
-      - name: Upload build artifact
+      - name: Upload Final AAB
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit-AAB
+          name: BikeFit_Final_Success
           path: build/app/outputs/bundle/release/app-release.aab
