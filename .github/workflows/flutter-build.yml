@@ -26,26 +26,19 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Restore release keystore
-        run: |
-          mkdir -p android/app
-          # 시크릿 값을 파일로 저장 (개행 문자 처리를 위해 printf 사용)
-          printf "%s" "${{ secrets.RELEASE_KEYSTORE }}" | base64 --decode > android/app/release.jks
-
       - name: Verify keystore file
         run: |
-          echo "Checking restored keystore file..."
+          echo "Checking keystore file in repository..."
+          # 파일이 실제 경로에 있는지 상세히 확인합니다.
           ls -la android/app/release.jks
-          # 파일 크기 확인
-          FILE_SIZE=$(stat -c%s android/app/release.jks)
-          echo "File size: $FILE_SIZE bytes"
-          if [ "$FILE_SIZE" -le 0 ]; then
-            echo "ERROR: release.jks is empty. Check your GitHub Secret 'RELEASE_KEYSTORE'."
+          if [ ! -f android/app/release.jks ]; then
+            echo "ERROR: release.jks not found in android/app/"
             exit 1
           fi
 
       - name: Create key.properties
         run: |
+          # 업로드하신 진짜 jks 파일을 사용하도록 경로를 지정합니다.
           cat <<EOF > android/key.properties
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
