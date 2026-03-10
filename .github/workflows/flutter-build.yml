@@ -21,13 +21,17 @@ jobs:
 
       - name: 환경 재생성 및 v2 설정
         run: |
+          # 1. 안드로이드 폴더 초기화 및 재생성
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           flutter pub get
           
-          # AndroidManifest 설정 (v2 embedding 포함)
+          # 2. AndroidManifest 설정 (권한 및 v2 embedding)
           cat <<EOF > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.overthebike.over_the_bike_fit">
+              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
               <application android:label="Indoor_fit_app" android:icon="@mipmap/ic_launcher">
                   <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:theme="@style/LaunchTheme">
                       <intent-filter>
@@ -41,27 +45,27 @@ jobs:
           EOF
           sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
 
-      - name: 서명 설정 (업로드된 진짜 키 사용)
+      - name: 진짜 키스토어 복원 및 서명 설정
         run: |
-          # key.properties 작성 - 별칭을 upload-key로 고정합니다.
+          # 1. GitHub Secrets에서 키스토어 파일 복원 (파일명: release.jks)
+          echo "${{ secrets.RELEASE_KEYSTORE }}" | base64 --decode > android/app/release.jks
+          
+          # 2. key.properties 작성 (별칭: fresh-upload-key 적용)
           cat <<EOF > android/key.properties
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
-          keyAlias=upload-key
+          keyAlias=fresh-upload-key
           storeFile=release.jks
           EOF
-          
-          # jks 파일을 android/app 폴더로 복사 (flutter create 후이므로 다시 배치)
-          mkdir -p android/app
-          cp android/app/release.jks android/app/release.jks || cp release.jks android/app/release.jks
 
-      - name: Build AAB
+      - name: Build Release AAB
         run: |
           flutter clean
           flutter pub get
+          # 정확한 별칭으로 서명을 진행합니다.
           flutter build appbundle --release --no-tree-shake-icons
 
-      - name: Upload Artifact
+      - name: Upload Final AAB
         uses: actions/upload-artifact@v4
         with:
           name: BikeFit_Final_AAB
