@@ -1,4 +1,4 @@
-name: BikeFit Final Victory (Fixed SHA1)
+name: BikeFit Final Victory (No Fallback)
 
 on:
   workflow_dispatch:
@@ -19,25 +19,28 @@ jobs:
         with:
           flutter-version: 3.27.1
 
-      - name: 🏗️ 프로젝트 초기화 (이때 설정이 다 날아감)
+      - name: 🏗️ 프로젝트 초기화 (서명 설정 증발 방어)
         run: |
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           flutter pub get
 
-      - name: 🔑 진짜 Keystore 복원 (75:CD...)
+      - name: 🔑 진짜 Keystore 복원 (SHA1: 75:CD...)
         env:
           KEY_DATA: ${{ secrets.RELEASE_KEYSTORE }}
         run: |
           mkdir -p android/app
-          # 모바일 복사 시 발생하는 줄바꿈 제거 후 복원
+          # 모바일 복사 시 발생하는 줄바꿈/공백 제거
           echo "$KEY_DATA" | tr -d '\n ' | base64 --decode > android/app/release.jks
           
-          # 파일이 없으면 빌드 중단 (가짜 키 생성 방지)
-          if [ ! -s android/app/release.jks ]; then exit 1; fi
+          # 💡 [방어] 키 파일이 없거나 0바이트면 빌드 즉시 중단
+          if [ ! -s android/app/release.jks ]; then
+            echo "❌ ERROR: Keystore secret is empty or corrupted!"
+            exit 1
+          fi
 
-      - name: 🔧 서명 설정 강제 주입 (Gradle 개조)
-        # 💡 [핵심] 초기화된 build.gradle에 서명 로직을 다시 심습니다.
+      - name: 🔧 Gradle 서명 설정 강제 주입
+        # 💡 [핵심] flutter create로 날아간 build.gradle에 서명 로직을 다시 심습니다.
         run: |
           cat <<EOF > android/key.properties
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
@@ -46,22 +49,44 @@ jobs:
           storeFile=release.jks
           EOF
           
+          # build.gradle 파일에 signingConfigs 로직 삽입
           FILE=android/app/build.gradle
-          # Gradle 파일 상단에 properties 로드 로직 추가
           sed -i '1i def keystoreProperties = new Properties()\ndef keystorePropertiesFile = rootProject.file("key.properties")\nif (keystorePropertiesFile.exists()) { keystoreProperties.load(new FileInputStream(keystorePropertiesFile)) }' $FILE
           
-          # android 블록 안에 signingConfigs와 buildTypes 강제 삽입
-          sed -i '/android {/a \    signingConfigs {\n        release {\n            keyAlias keystoreProperties["keyAlias"]\n            keyPassword keystoreProperties["keyPassword"]\n            storeFile file(keystoreProperties["storeFile"])\n            storePassword keystoreProperties["storePassword"]\n        }\n    }\n    buildTypes {\n        release {\n            signingConfig signingConfigs.release\n        }\n    }' $FILE
+          # android { ... } 블록 내부에 서명 설정 추가
+          python3 -c "
+          import os
+          path = 'android/app/build.gradle'
+          with open(path, 'r') as f: content = f.read()
+          config = '''
+              signingConfigs {
+                  release {
+                      keyAlias keystoreProperties['keyAlias']
+                      keyPassword keystoreProperties['keyPassword']
+                      storeFile file(keystoreProperties['storeFile'])
+                      storePassword keystoreProperties['storePassword']
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+          '''
+          if 'android {' in content:
+              new_content = content.replace('android {', 'android {' + config, 1)
+              with open(path, 'w') as f: f.write(new_content)
+          "
 
-      - name: 🚀 AAB 빌드 실행
+      - name: 🚀 AAB 빌드 실행 (순정 Release 모드)
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 🔍 [최종 확인] SHA1 지문 대조
-        # 💡 빌드된 결과물의 지문을 로그에 찍습니다. 75:CD...가 나오면 끝입니다.
+      - name: 🔍 [최종 검증] SHA1 지문 확인
+        # 💡 빌드된 결과물의 지문을 로그에 찍습니다. 75:CD...가 나오면 성공입니다!
         run: |
           keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab | grep SHA1
 
-      - name: 📦 AAB 추출
+      - name: 📦 최종 AAB 추출
         uses: actions/upload-artifact@v4
         with:
           name: BikeFit_Final_AAB
