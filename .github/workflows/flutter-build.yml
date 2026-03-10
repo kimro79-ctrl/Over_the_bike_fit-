@@ -1,7 +1,9 @@
-name: BikeFit Final Success Build
+name: BikeFit Final Victory Build
 
 on:
-  workflow_dispatch: # 수동으로 빌드 시작 버튼을 활성화합니다.
+  workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
   build:
@@ -21,28 +23,26 @@ jobs:
         with:
           flutter-version: 3.27.1
 
-      - name: 🏗️ Android 프로젝트 리셋 및 초기화
+      - name: 🏗️ Android 프로젝트 리셋
         run: |
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           flutter pub get
 
-      - name: 🔑 Keystore 복원 (75:CD... 지문)
-        # 💡 등록하신 RELEASE_KEYSTORE 시크릿을 실제 파일로 변환합니다.
+      - name: 🔑 Keystore 복원 (사용자님 Secret 사용)
         env:
           KEY_DATA: ${{ secrets.RELEASE_KEYSTORE }}
         run: |
           mkdir -p android/app
+          # 💡 Secret에서 가져온 데이터를 실제 파일로 정밀 복원합니다.
           echo "$KEY_DATA" | tr -d '\n ' | base64 --decode > android/app/release.jks
           
-          # 파일 검증 (0바이트 방지)
           if [ ! -s android/app/release.jks ]; then
-            echo "❌ ERROR: Keystore file is empty. Check your Secret!"
+            echo "❌ Secret 데이터가 비어있습니다. 등록한 값을 다시 확인하세요!"
             exit 1
           fi
 
-      - name: 🔧 서명 정보 주입 (Alias: fresh-upload-key)
-        # [span_0](start_span)💡 사용자님의 별칭인 'fresh-upload-key'를 고정하여 주입합니다.[span_0](end_span)
+      - name: 🔧 서명 설정 주입
         run: |
           cat <<EOF > android/key.properties
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
@@ -52,7 +52,6 @@ jobs:
           EOF
 
       - name: 🛠️ build.gradle 강제 개조 (서명 고정)
-        # 💡 어떤 빌드에서도 무조건 우리가 설정한 release 서명을 쓰도록 강제합니다.
         run: |
           FILE=android/app/build.gradle
           sed -i '1i import java.util.Properties\nimport java.io.FileInputStream' $FILE
@@ -64,7 +63,7 @@ jobs:
       - name: 🚀 AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 📦 최종 AAB 추출
+      - name: 📦 AAB 추출 (성공 시 파일 생성)
         uses: actions/upload-artifact@v4
         with:
           name: BikeFit_Final_AAB
