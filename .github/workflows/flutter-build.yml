@@ -1,109 +1,40 @@
-name: BikeFit Final Ultra Build
+name: Mobile Key Generation Utility
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # 모바일에서 'Run workflow' 버튼으로 실행
 
 jobs:
-  build:
+  generate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Java & Flutter
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.27.1'
-          channel: 'stable'
-
-      - name: 1️⃣ 빌드 환경 초기화
+      - name: 1. 새로운 업로드 키 및 PEM 생성
         run: |
-          rm -rf android
-          flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
-          flutter pub get
+          # 완전히 새로운 별칭과 파일명 사용 (중복 방지)
+          keytool -genkey -v -keystore mobile-upload-key.jks \
+            -alias final-mobile-key \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass "password123" \
+            -keypass "password123" \
+            -dname "CN=BikeFit, OU=Dev, O=MyCompany, L=Seoul, S=Seoul, C=KR"
 
-      - name: 2️⃣ 키스토어 복원 (0바이트 철저 방어)
+          # 구글 제출용 PEM 추출
+          keytool -export -rfc \
+            -keystore mobile-upload-key.jks \
+            -alias final-mobile-key \
+            -file final_mobile_cert.pem \
+            -storepass "password123"
+
+      - name: 2. 결과값 출력 (이걸 복사해서 쓰세요)
         run: |
-          mkdir -p android/app
-          # Secret 데이터를 디코딩하여 파일 생성
-          echo "${{ secrets.RELEASE_KEYSTORE }}" | base64 --decode > android/app/release.jks
-          
-          # [검증] 파일 리스트와 크기 출력
-          echo "--- Keystore File Info ---"
-          ls -la android/app/release.jks
-          
-          # 파일 크기가 0이면 빌드 강제 중단
-          if [ ! -s android/app/release.jks ]; then
-            echo "❌ ERROR: release.jks is 0 bytes. Check your GitHub Secret 'RELEASE_KEYSTORE'!"
-            exit 1
-          fi
-
-      - name: 3️⃣ 서명 정보 및 Gradle 설정 주입
-        run: |
-          # key.properties 작성
-          cat <<EOF > android/key.properties
-          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          keyAlias=fresh-upload-key
-          storeFile=release.jks
-          EOF
-
-          # build.gradle에 서명 로직 강제 삽입
-          cat <<EOF > android/app/build.gradle
-          def keystoreProperties = new Properties()
-          def keystorePropertiesFile = rootProject.file('key.properties')
-          if (keystorePropertiesFile.exists()) {
-              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-          }
-          plugins {
-              id "com.android.application"
-              id "kotlin-android"
-              id "dev.flutter.flutter-gradle-plugin"
-          }
-          android {
-              namespace "com.overthebike.over_the_bike_fit"
-              compileSdk 34
-              signingConfigs {
-                  release {
-                      keyAlias keystoreProperties['keyAlias']
-                      keyPassword keystoreProperties['keyPassword']
-                      storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
-                      storePassword keystoreProperties['storePassword']
-                  }
-              }
-              buildTypes {
-                  release {
-                      signingConfig signingConfigs.release
-                      minifyEnabled true
-                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-                  }
-              }
-              defaultConfig {
-                  applicationId "com.overthebike.over_the_bike_fit"
-                  minSdk 21
-                  targetSdk 34
-                  versionCode 20  # 안전하게 버전을 올려 중복 방지
-                  versionName "2.0.0"
-              }
-          }
-          flutter { source '../..' }
-          EOF
-
-      - name: 4️⃣ Build Release AAB
-        run: |
-          flutter clean
-          flutter pub get
-          flutter build appbundle --release --no-tree-shake-icons
-
-      - name: 5️⃣ 최종 결과물 지문 확인
-        run: |
-          keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab | grep SHA1
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: BikeFit_Final_AAB
-          path: build/app/outputs/bundle/
+          echo "===================================================="
+          echo "🔑 1. 구글 플레이 콘솔에 제출할 PEM 내용 (전체 복사):"
+          cat final_mobile_cert.pem
+          echo "===================================================="
+          echo "📦 2. GitHub Secret(RELEASE_KEYSTORE)에 넣을 Base64:"
+          base64 -w 0 mobile-upload-key.jks
+          echo -e "\n===================================================="
+          echo "📝 설정 정보:"
+          echo "ALIAS: final-mobile-key"
+          echo "PASSWORD: password123"
