@@ -1,4 +1,4 @@
-name: BikeFit Final Victory - SHA1 Fix
+name: BikeFit Final Victory - SHA1 Verification
 
 on:
   workflow_dispatch:
@@ -25,64 +25,24 @@ jobs:
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           flutter pub get
 
-      - name: 🔑 진짜 Keystore 복원
+      - name: 🔑 Keystore 복원
         env:
           KEY_DATA: ${{ secrets.RELEASE_KEYSTORE }}
         run: |
           mkdir -p android/app
+          # 모바일 복사 시 발생하는 줄바꿈 등을 제거하고 복원합니다.
           echo "$KEY_DATA" | tr -d '\n ' | base64 --decode > android/app/release.jks
-          if [ ! -s android/app/release.jks ]; then exit 1; fi
+          if [ ! -s android/app/release.jks ]; then
+            echo "❌ Keystore 파일 복원 실패!"
+            exit 1
+          fi
 
-      - name: 🔧 Gradle 서명 설정 정밀 주입
-        # plugins 블록이 끝난 뒤에 코드를 넣어 문법 오류를 방어합니다
+      - name: 🕵️ [필독] 현재 사용 중인 키 지문 확인
+        # 빌드 전, Secret에 넣은 키가 진짜 75:CD... 인지 로그에 출력합니다.
         run: |
-          cat <<EOF > android/key.properties
-          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          keyAlias=fresh-upload-key
-          storeFile=release.jks
-          EOF
-          
-          python3 -c "
-          path = 'android/app/build.gradle'
-          with open(path, 'r') as f: lines = f.readlines()
-          signing_code = '''
-          def keystoreProperties = new Properties()
-          def keystorePropertiesFile = rootProject.file('key.properties')
-          if (keystorePropertiesFile.exists()) { keystoreProperties.load(new FileInputStream(keystorePropertiesFile)) }
-          android {
-              signingConfigs {
-                  release {
-                      keyAlias keystoreProperties['keyAlias']
-                      keyPassword keystoreProperties['keyPassword']
-                      storeFile file(keystoreProperties['storeFile'])
-                      storePassword keystoreProperties['storePassword']
-                  }
-              }
-              buildTypes {
-                  release { signingConfig signingConfigs.release }
-              }
-          }
-          '''
-          with open(path, 'w') as f:
-              inserted = False
-              for line in lines:
-                  f.write(line)
-                  if 'plugins {' in line and not inserted:
-                      # plugins 블록 시작 직후가 아니라, 파일 구조상 안전한 곳에 삽입
-                      f.write(signing_code); inserted = True
-          "
+          echo "검사 대상 별칭: fresh-upload-key"
+          keytool -list -v -keystore android/app/release.jks \
+            -alias fresh-upload-key \
+            -storepass ${{ secrets.KEYSTORE_PASSWORD }} | grep SHA1 || echo "⚠️ 별칭 불일치 또는 키 오류"
 
-      - name: 🚀 AAB 빌드 실행
-        run: flutter build appbundle --release --no-tree-shake-icons
-
-      - name: 🔍 [최종 확인] SHA1 지문 대조
-        # 빌드된 파일의 지문을 찍어서 75:CD... 인지 확인합니다
-        run: |
-          keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab | grep SHA1
-
-      - name: 📦 최종 AAB 추출
-        uses: actions/upload-artifact@v4
-        with:
-          name: BikeFit_Final_AAB
-          path: build/app/outputs/bundle/release/app-release.aab
+      - name: 🔧 Gradle 서명 설정
