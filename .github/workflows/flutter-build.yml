@@ -1,4 +1,4 @@
-name: BikeFit PlayStore Release - Final Victory
+name: BikeFit PlayStore Release - Final Fix
 
 on:
   workflow_dispatch:
@@ -6,6 +6,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
@@ -30,7 +31,7 @@ jobs:
           KEY_DATA: ${{ secrets.RELEASE_KEYSTORE }}
         run: |
           mkdir -p android/app
-          # 줄바꿈 및 공백을 완벽히 제거 후 복원
+          # 줄바꿈과 공백을 제거하여 바이너리 손상 방지
           echo "$KEY_DATA" | tr -d '\n ' | base64 --decode > android/app/release.jks
 
       - name: 🔧 key.properties 생성
@@ -38,20 +39,25 @@ jobs:
           cat <<EOF > android/key.properties
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
-          # 💡 실제 확인된 별칭인 fresh-upload-key를 직접 입력해도 안전합니다.
-          keyAlias=${{ secrets.KEY_ALIAS || 'fresh-upload-key' }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
           storeFile=release.jks
           EOF
 
-      - name: ⚙️ Gradle 서명 설정 강제 주입
+      - name: ⚙️ Gradle 서명 설정 주입 (Python 방식 - 문법 오류 방지)
+        # 쉘 스크립트의 따옴표 문제를 피하기 위해 Python을 사용합니다.
         run: |
           python3 -c "
+          import os
           path = 'android/app/build.gradle'
-          with open(path, 'r') as f: lines = f.readlines()
+          with open(path, 'r', encoding='utf-8') as f: lines = f.readlines()
+          
           signing_code = \"\"\"
           def keystoreProperties = new Properties()
           def keystorePropertiesFile = rootProject.file('key.properties')
-          if (keystorePropertiesFile.exists()) { keystoreProperties.load(new FileInputStream(keystorePropertiesFile)) }
+          if (keystorePropertiesFile.exists()) {
+              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+          }
+          
           android {
               signingConfigs {
                   release {
@@ -61,10 +67,15 @@ jobs:
                       storePassword keystoreProperties['storePassword']
                   }
               }
-              buildTypes { release { signingConfig signingConfigs.release } }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
           }
           \"\"\"
-          with open(path, 'w') as f:
+          
+          with open(path, 'w', encoding='utf-8') as f:
               inserted = False
               for line in lines:
                   f.write(line)
@@ -73,17 +84,19 @@ jobs:
                       inserted = True
           "
 
-      - name: 🔍 Keystore 지문 확인 (75:CD... 대조)
-        # 여기서 에러가 나더라도 빌드가 계속되도록 || true를 붙였습니다.
+      - name: 🔍 [중요] Keystore 지문 확인
+        # 별칭을 직접 명시하여 확인 과정을 거칩니다.
         run: |
-          keytool -list -v -keystore android/app/release.jks \
+          keytool -list -v \
+            -keystore android/app/release.jks \
             -storepass ${{ secrets.KEYSTORE_PASSWORD }} \
-            -alias ${{ secrets.KEY_ALIAS || 'fresh-upload-key' }} | grep SHA1 || true
+            -alias ${{ secrets.KEY_ALIAS }} | grep SHA1
 
       - name: 🏗 AAB 빌드
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 🔍 빌드된 AAB SHA1 확인
+      - name: 🔍 빌드된 AAB 지문 대조
+        # 최종 결과물의 지문이 75:CD...인지 확인합니다.
         run: |
           keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab | grep SHA1
 
