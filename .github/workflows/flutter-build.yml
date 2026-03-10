@@ -19,19 +19,15 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 환경 재생성 (v2 Embedding 강제 적용)
+      - name: 환경 재생성 및 v2 설정
         run: |
-          # 1. 기존 안드로이드 폴더 완전 삭제 및 재생성
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           flutter pub get
           
-          # 2. AndroidManifest 설정 (블루투스 권한 및 v2 embedding)
+          # AndroidManifest 설정 (v2 embedding 포함)
           cat <<EOF > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.overthebike.over_the_bike_fit">
-              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
               <application android:label="Indoor_fit_app" android:icon="@mipmap/ic_launcher">
                   <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:theme="@style/LaunchTheme">
                       <intent-filter>
@@ -43,32 +39,30 @@ jobs:
               </application>
           </manifest>
           EOF
-          
-          # 3. MultiDex 활성화
           sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
 
-      - name: 진짜 키스토어 배치 및 서명 설정
+      - name: 서명 설정 (업로드된 진짜 키 사용)
         run: |
-          # [span_3](start_span)리포지토리에 올리신 진짜 release.jks를 빌드 경로로 복사[span_3](end_span)
-          cp android/app/release.jks ./release.jks || echo "이미 루트에 있음"
-          
-          # [span_4](start_span)key.properties 작성 (사용자님 파일의 별칭 'upload-key' 적용)[span_4](end_span)
+          # key.properties 작성 - 별칭을 upload-key로 고정합니다.
           cat <<EOF > android/key.properties
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           keyAlias=upload-key
-          storeFile=../release.jks
+          storeFile=release.jks
           EOF
+          
+          # jks 파일을 android/app 폴더로 복사 (flutter create 후이므로 다시 배치)
+          mkdir -p android/app
+          cp android/app/release.jks android/app/release.jks || cp release.jks android/app/release.jks
 
-      - name: Build Release AAB
+      - name: Build AAB
         run: |
           flutter clean
           flutter pub get
-          # 이제 진짜 키로 도장이 찍힙니다.
           flutter build appbundle --release --no-tree-shake-icons
 
-      - name: Upload Final AAB
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Final_Success
+          name: BikeFit_Final_AAB
           path: build/app/outputs/bundle/release/app-release.aab
