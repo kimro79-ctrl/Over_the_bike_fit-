@@ -33,12 +33,12 @@ jobs:
           # Base64 데이터를 깨짐 없이 바이너리로 복원합니다.
           echo "$KEY_DATA" | tr -d '\n ' | base64 --decode > android/app/release.jks
 
-      - name: 🔧 key.properties 생성 (별칭 강제 교정)
+      - name: 🔧 key.properties 생성 (fresh-upload-key 강제 지정)
         run: |
           cat <<EOF > android/key.properties
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
-          # 지문(75:CD...)이 들어있는 진짜 별칭으로 강제 지정하여 혼선을 방지합니다.
+          # 지문(75:CD...)이 들어있는 정확한 별칭을 고정합니다.
           keyAlias=fresh-upload-key
           storeFile=release.jks
           EOF
@@ -73,8 +73,8 @@ jobs:
       - name: 🏗 AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 🔍 [최종 확인] 빌드된 AAB SHA1 지문 대조
-        # 빌드된 결과물의 지문이 구글이 요구하는 75:CD... 인지 마지막으로 확인합니다.
+      - name: 🔍 [최종 검증] 빌드된 AAB SHA1 확인
+        # 출력된 SHA1이 75:CD:32:95... 로 시작하는지 확인하세요.
         run: |
           echo "=================================================="
           echo "구글 요구 지문: 75:CD:32:95:21:A1:35:86:C6:33:E7:ED:4E:F6:87:37:E2:D9:FD:3D"
