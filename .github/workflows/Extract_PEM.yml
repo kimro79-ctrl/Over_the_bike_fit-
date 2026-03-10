@@ -1,25 +1,36 @@
 name: Brand New Key For Google
+
 on:
   workflow_dispatch:
+
 jobs:
   get_pem:
     runs-on: ubuntu-latest
     steps:
-      - name: Generate New Key
+      - name: 🔑 완전히 새로운 업로드 키 생성
         run: |
-          # 1. 정보를 살짝 바꿔서 완전히 새로운 키 생성 (중복 회피)
-          # 비밀번호를 Sodomaki80으로 변경했습니다.
-          keytool -genkey -v -keystore final_retry.jks \
-          -keyalg RSA -keysize 2048 -validity 10000 \
-          -alias final-alias -storepass Sodomaki80 \
-          -keypass Sodomaki80 -dname "CN=BikeFitFinal, O=OverTheBike, C=KR"
+          # 별칭을 bikefitkey2026으로 고정하여 인식 오류 방지
+          keytool -genkey -v -keystore final_upload_key.jks \
+            -alias bikefitkey2026 \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "password123" -keypass "password123" \
+            -dname "CN=BikeFit, O=Dev, C=KR"
 
-          # 2. 구글 제출용 PEM 파일 추출
-          keytool -export -rfc -keystore final_retry.jks \
-          -alias final-alias -file final_upload_cert.pem \
-          -storepass Sodomaki80
-      - name: Upload Artifact
+      - name: 📄 PEM 인증서 추출 및 직접 출력
+        run: |
+          # 고정된 별칭으로 인증서 추출
+          keytool -export -rfc -keystore final_upload_key.jks \
+            -alias bikefitkey2026 -file upload_certificate.pem -storepass "password123"
+          
+          echo "------------------------------------------------------"
+          echo "⬇️ 아래 내용을 전체 복사해서 구글 플레이 콘솔에 제출하세요 ⬇️"
+          echo "------------------------------------------------------"
+          cat upload_certificate.pem
+          echo "------------------------------------------------------"
+
+      - name: 📤 PEM 파일 단독 업로드 (압축 해제 불필요)
         uses: actions/upload-artifact@v4
         with:
-          name: google-final-pem
-          path: final_upload_cert.pem
+          name: upload_certificate.pem # 결과물 이름을 .pem으로 명시
+          path: upload_certificate.pem
+          compression-level: 0 # 압축 끄기
