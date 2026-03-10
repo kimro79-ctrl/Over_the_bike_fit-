@@ -19,43 +19,28 @@ jobs:
           flutter-version: '3.27.1'
           channel: 'stable'
 
-      - name: 1️⃣ 환경 재생성 (Clean State)
+      - name: 1️⃣ 환경 재생성 (v2 Embedding 적용)
         run: |
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           flutter pub get
 
-      - name: 2️⃣ 키스토어 복원 및 데이터 검증
+      - name: 2️⃣ 키스토어 복원 및 검증
         run: |
           mkdir -p android/app
-          
-          # Secrets 값이 비어있는지 먼저 확인
-          if [ -z "${{ secrets.RELEASE_KEYSTORE }}" ]; then
-            echo "ERROR: GitHub Secret 'RELEASE_KEYSTORE' is EMPTY!"
-            exit 1
-          fi
-
-          # base64 디코딩 후 파일 생성
+          # Secrets 데이터를 파일로 변환
           echo "${{ secrets.RELEASE_KEYSTORE }}" | base64 --decode > android/app/release.jks
           
-          # 파일 크기 재확인 (0바이트 방지)
+          # 파일 크기 확인 (0바이트면 에러 발생)
           ls -la android/app/release.jks
           if [ ! -s android/app/release.jks ]; then
-            echo "ERROR: Decoded release.jks is 0 bytes. Check your base64 string!"
+            echo "ERROR: release.jks is 0 bytes. Check your GitHub Secret 'RELEASE_KEYSTORE'!"
             exit 1
           fi
 
-      - name: 3️⃣ 서명 정보 및 Gradle 주입
+      - name: 3️⃣ 서명 로직 및 권한 강제 주입
         run: |
-          # key.properties 작성 (별칭: fresh-upload-key)
-          cat <<EOF > android/key.properties
-          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          keyAlias=fresh-upload-key
-          storeFile=release.jks
-          EOF
-
-          # build.gradle 서명 로직 강제 주입
+          # build.gradle에 서명(signingConfigs) 로직 주입
           cat <<EOF > android/app/build.gradle
           def keystoreProperties = new Properties()
           def keystorePropertiesFile = rootProject.file('key.properties')
@@ -89,21 +74,35 @@ jobs:
                   applicationId "com.overthebike.over_the_bike_fit"
                   minSdk 21
                   targetSdk 34
-                  versionCode 12  # 기존보다 높은 버전 코드 부여
-                  versionName "1.2.0"
+                  versionCode 15  # 기존보다 높은 버전 코드
+                  versionName "1.5.0"
               }
           }
           flutter { source '../..' }
           EOF
 
-      - name: 4️⃣ Build Release AAB
+      - name: 4️⃣ 서명 정보 최종 설정
+        run: |
+          # 별칭(Alias)은 파일 데이터에 기록된 'fresh-upload-key'를 사용합니다.
+          cat <<EOF > android/key.properties
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=fresh-upload-key
+          storeFile=release.jks
+          EOF
+
+      - name: 5️⃣ Build Release AAB
         run: |
           flutter clean
           flutter pub get
           flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 5️⃣ 최종 AAB 지문 확인 (SHA1 체크용)
+      - name: 6️⃣ 최종 서명 지문 확인
         run: |
           keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab | grep SHA1
 
       - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BikeFit_Final_Success
+          path: build/app/outputs/bundle/release/app-release.aab
