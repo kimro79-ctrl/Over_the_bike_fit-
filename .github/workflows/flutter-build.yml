@@ -1,4 +1,4 @@
-name: BikeFit Final Victory - Source Based Build
+name: BikeFit Final Victory - V2 Embedding & Real Signing
 
 on:
   workflow_dispatch:
@@ -19,6 +19,13 @@ jobs:
         with:
           flutter-version: 3.27.1
 
+      - name: 🏗️ 프로젝트 초기화 (Android 리셋 및 V2 강제)
+        run: |
+          rm -rf android
+          # V2 임베딩이 적용된 깨끗한 안드로이드 프로젝트 생성
+          flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
+          flutter pub get
+
       - name: 🔑 Keystore 복원
         env:
           KEY_DATA: ${{ secrets.RELEASE_KEYSTORE }}
@@ -26,8 +33,7 @@ jobs:
           mkdir -p android/app
           echo "$KEY_DATA" | tr -d '\n ' | base64 --decode > android/app/release.jks
 
-      - name: 🔧 key.properties 생성
-        # 사용자님 분석대로 경로를 app/release.jks로 고정합니다.
+      - name: 🔧 key.properties 생성 (app/ 경로 고정)
         run: |
           cat <<EOF > android/key.properties
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
@@ -36,11 +42,57 @@ jobs:
           storeFile=app/release.jks
           EOF
 
-      - name: 🏗️ 의존성 설치
-        run: flutter pub get
+      - name: 📑 [결정적 단계] build.gradle을 V2 및 서명 정석 코드로 교체
+        run: |
+          cat <<EOF > android/app/build.gradle
+          def keystoreProperties = new Properties()
+          def keystorePropertiesFile = rootProject.file('key.properties')
+          if (keystorePropertiesFile.exists()) {
+              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+          }
 
-      - name: 🏗 AAB 빌드 실행 (이미 수정된 build.gradle 사용)
-        # 이제 워크플로우에서 코드를 수정하지 않습니다. 소스 코드 그대로 빌드합니다.
+          plugins {
+              id "com.android.application"
+              id "kotlin-android"
+              id "dev.flutter.flutter-gradle-plugin"
+          }
+
+          android {
+              namespace "com.overthebike.over_the_bike_fit"
+              compileSdk 35
+
+              defaultConfig {
+                  applicationId "com.overthebike.over_the_bike_fit"
+                  minSdk 21
+                  targetSdk 35
+                  versionCode 1700
+                  versionName "1.0.0"
+              }
+
+              signingConfigs {
+                  release {
+                      keyAlias keystoreProperties['keyAlias']
+                      keyPassword keystoreProperties['keyPassword']
+                      storeFile file(keystoreProperties['storeFile'])
+                      storePassword keystoreProperties['storePassword']
+                  }
+              }
+
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                      minifyEnabled false
+                      shrinkResources false
+                  }
+              }
+          }
+
+          flutter {
+              source '../..'
+          }
+          EOF
+
+      - name: 🏗 AAB 빌드 실행 (V2 임베딩 적용 상태)
         run: flutter build appbundle --release --no-tree-shake-icons
 
       - name: 🔍 [최종 확인] SHA1 지문 대조
@@ -54,5 +106,5 @@ jobs:
       - name: 📦 결과물 업로드
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Final_AAB
+          name: BikeFit_Perfect_V2_AAB
           path: build/app/outputs/bundle/release/app-release.aab
