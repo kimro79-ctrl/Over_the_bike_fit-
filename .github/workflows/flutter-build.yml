@@ -46,7 +46,14 @@ jobs:
           storeFile=release.jks
           EOF
 
-      - name: Keystore SHA1 확인
+      - name: keystore alias 목록 확인
+        run: |
+          echo "=== keystore alias list ==="
+          keytool -list \
+          -keystore android/app/release.jks \
+          -storepass ${{ secrets.KEYSTORE_PASSWORD }}
+
+      - name: SHA1 확인
         run: |
           echo "=== KEYSTORE SHA1 ==="
           keytool -list -v \
@@ -56,7 +63,7 @@ jobs:
 
       - name: AAB 빌드
         run: |
-          flutter build appbundle --release --no-tree-shake-icons --build-number=1002
+          flutter build appbundle --release --no-tree-shake-icons --build-number=1003
 
       - name: AAB SHA1 확인
         run: |
