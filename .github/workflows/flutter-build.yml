@@ -1,4 +1,4 @@
-name: BikeFit Final Victory - Gradle First Fix
+name: BikeFit Final Victory - Source Based Build
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ jobs:
       - name: 📥 코드 체크아웃
         uses: actions/checkout@v4
 
-      - name: ☕ Java 및 Flutter 설정
+      - name: ☕ Java 및 Flutter 환경 설정
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -19,20 +19,15 @@ jobs:
         with:
           flutter-version: 3.27.1
 
-      - name: 🏗️ 프로젝트 초기화
-        run: |
-          rm -rf android
-          flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
-          flutter pub get
-
-      - name: 🔑 Keystore 복원 (2월 20일 진짜 키)
+      - name: 🔑 Keystore 복원
         env:
           KEY_DATA: ${{ secrets.RELEASE_KEYSTORE }}
         run: |
           mkdir -p android/app
           echo "$KEY_DATA" | tr -d '\n ' | base64 --decode > android/app/release.jks
 
-      - name: 🔧 key.properties 생성 (사용자님 수정 경로)
+      - name: 🔧 key.properties 생성
+        # 사용자님 분석대로 경로를 app/release.jks로 고정합니다.
         run: |
           cat <<EOF > android/key.properties
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
@@ -41,60 +36,23 @@ jobs:
           storeFile=app/release.jks
           EOF
 
-      - name: 💉 [핵심] 빌드 전 build.gradle 구조 개편
-        run: |
-          python3 -c "
-          path = 'android/app/build.gradle'
-          with open(path, 'r', encoding='utf-8') as f:
-              lines = f.readlines()
-          
-          # 서명 설정 로직 정의
-          signing_logic = [
-              'def keystoreProperties = new Properties()\n',
-              'def keystorePropertiesFile = rootProject.file(\"key.properties\")\n',
-              'if (keystorePropertiesFile.exists()) {\n',
-              '    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\n',
-              '}\n\n'
-          ]
-          
-          new_lines = []
-          for line in lines:
-              # android { 블록 시작 전에 로직 주입
-              if 'android {' in line:
-                  new_lines.extend(signing_logic)
-              new_lines.append(line)
-              
-              # signingConfigs와 buildTypes 강제 연결
-              if 'buildTypes {' in line:
-                  new_lines.append('        signingConfigs {\n')
-                  new_lines.append('            release {\n')
-                  new_lines.append('                keyAlias keystoreProperties[\"keyAlias\"]\n')
-                  new_lines.append('                keyPassword keystoreProperties[\"keyPassword\"]\n')
-                  new_lines.append('                storeFile file(keystoreProperties[\"storeFile\"])\n')
-                  new_lines.append('                storePassword keystoreProperties[\"storePassword\"]\n')
-                  new_lines.append('            }\n')
-                  new_lines.append('        }\n')
-              
-              if 'release {' in line and 'buildTypes' in new_lines[-2]:
-                  new_lines.append('            signingConfig signingConfigs.release\n')
-          
-          with open(path, 'w', encoding='utf-8') as f:
-              f.writelines(new_lines)
-          "
+      - name: 🏗️ 의존성 설치
+        run: flutter pub get
 
-      - name: 🏗 AAB 빌드 실행 (강제 서명 적용 상태)
-        run: flutter build appbundle --release --no-tree-shake-icons --build-number=1600
+      - name: 🏗 AAB 빌드 실행 (이미 수정된 build.gradle 사용)
+        # 이제 워크플로우에서 코드를 수정하지 않습니다. 소스 코드 그대로 빌드합니다.
+        run: flutter build appbundle --release --no-tree-shake-icons
 
       - name: 🔍 [최종 확인] SHA1 지문 대조
         run: |
           echo "=================================================="
-          echo "목표(Google): 75:CD:32:95:21:A1:35:86:C6:33:E7:ED:4E:F6:87:37:E2:D9:FD:3D"
-          echo -n "실제 결과: "
+          echo "구글 요구 지문: 75:CD:32:95:21:A1:35:86:C6:33:E7:ED:4E:F6:87:37:E2:D9:FD:3D"
+          echo -n "실제 빌드 지문: "
           keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab | grep SHA1
           echo "=================================================="
 
       - name: 📦 결과물 업로드
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Final_Fixed_AAB
+          name: BikeFit_Final_AAB
           path: build/app/outputs/bundle/release/app-release.aab
