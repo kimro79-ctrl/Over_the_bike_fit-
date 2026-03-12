@@ -25,8 +25,7 @@ void main() async {
 }
 
 class WorkoutRecord {
-  final String id;
-  final String date;
+  final String id, date;
   final int avgHR;
   final double calories;
   final Duration duration;
@@ -57,8 +56,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   Duration _duration = Duration.zero;
   Timer? _workoutTimer;
   bool _isWorkingOut = false, _isWatchConnected = false;
-  List<FlSpot> _hrSpots = [];
-  double _timeCounter = 0;
   List<WorkoutRecord> _records = [];
 
   @override
@@ -74,26 +71,22 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       final String? res = prefs.getString('workout_records');
       if (res != null) {
         final List<dynamic> decoded = jsonDecode(res);
-        _records = decoded.map((item) => WorkoutRecord(item['id'] ?? DateTime.now().toString(), item['date'], item['avgHR'], (item['calories'] as num).toDouble(), Duration(seconds: item['durationSeconds'] ?? 0))).toList();
+        _records = decoded.map((item) => WorkoutRecord(item['id'], item['date'], item['avgHR'], (item['calories'] as num).toDouble(), Duration(seconds: item['durationSeconds']))).toList();
       }
     });
-  }
-
-  void _showToast(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating));
   }
 
   @override
   Widget build(BuildContext context) {
     double progress = (_calories / _goalCalories).clamp(0.0, 1.0);
     return Scaffold(
+      backgroundColor: Colors.black, // 이미지 로딩 전 대비
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        // ✅ 배경 이미지 강제 로드
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/background.png'),
+            image: AssetImage('assets/background.png'), 
             fit: BoxFit.cover,
           ),
         ),
@@ -106,13 +99,17 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 Icon(_isWatchConnected ? Icons.watch : Icons.watch_off, color: Colors.greenAccent)
               ]),
               const Spacer(),
-              // ✅ 중앙 자전거 아이콘 (1번 사진의 핵심 UI)
-              Image.asset('assets/icon/bike_ui_dark.png', height: 220, errorBuilder: (c, e, s) => const Icon(Icons.directions_bike, size: 100, color: Colors.greenAccent)),
+              // 중앙 네온 자전거 이미지
+              Image.asset(
+                'assets/icon/bike_ui_dark.png', 
+                height: 220, 
+                errorBuilder: (c, e, s) => const Icon(Icons.directions_bike, size: 100, color: Colors.greenAccent)
+              ),
               const Spacer(),
-              // ✅ 하단 데이터 박스 (반투명 블랙)
+              // 하단 데이터 정보창
               Container(
                 padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(color: Colors.black.withOpacity(0.7), borderRadius: BorderRadius.circular(20)),
                 child: Column(children: [
                   LinearProgressIndicator(value: progress, color: Colors.blueAccent, backgroundColor: Colors.white12, minHeight: 10),
                   const SizedBox(height: 20),
@@ -125,19 +122,12 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 ]),
               ),
               const SizedBox(height: 30),
-              // ✅ 하단 제어 버튼
+              // 하단 제어 버튼
               Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
                 _iconBtn(_isWorkingOut ? Icons.pause : Icons.play_arrow, "START", Colors.greenAccent, () {
                   setState(() { _isWorkingOut = !_isWorkingOut; if (_isWorkingOut) { _workoutTimer = Timer.periodic(const Duration(seconds: 1), (t) { setState(() { _duration += const Duration(seconds: 1); if (_heartRate >= 95) _calories += 0.15; }); }); } else { _workoutTimer?.cancel(); } });
                 }),
-                _iconBtn(Icons.save, "SAVE", Colors.white70, () async {
-                  if (_isWorkingOut) return;
-                  final r = WorkoutRecord(DateTime.now().toString(), DateFormat('yyyy-MM-dd').format(DateTime.now()), _avgHeartRate, _calories, _duration);
-                  setState(() { _records.insert(0, r); });
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('workout_records', jsonEncode(_records.map((e) => e.toJson()).toList()));
-                  _showToast("저장 완료");
-                }),
+                _iconBtn(Icons.save, "SAVE", Colors.white70, () {}),
                 _iconBtn(Icons.calendar_month, "REPORT", Colors.white70, () => Navigator.push(context, MaterialPageRoute(builder: (c) => HistoryScreen(records: _records)))),
               ]),
               const SizedBox(height: 10),
@@ -157,6 +147,6 @@ class HistoryScreen extends StatelessWidget {
   const HistoryScreen({Key? key, required this.records}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    return Scaffold(appBar: AppBar(title: const Text("기록 리포트")), body: ListView.builder(itemCount: records.length, itemBuilder: (c, i) => ListTile(title: Text("${records[i].date} - ${records[i].calories.toInt()} kcal"), subtitle: Text("${records[i].duration.inMinutes}분 운동"))));
+    return Scaffold(appBar: AppBar(title: const Text("운동 기록")), body: ListView.builder(itemCount: records.length, itemBuilder: (c, i) => ListTile(title: Text("${records[i].date} - ${records[i].calories.toInt()} kcal"))));
   }
 }
