@@ -1,8 +1,6 @@
 name: over_the_bike_fit
-description: "Indoor Bike Fitting App"
+description: "Indoor Bike Fit App"
 publish_to: 'none'
-
-# 사용자님이 요청하신 1703 버전
 version: 1.0.1+1703
 
 environment:
@@ -27,8 +25,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-  # 경로 뒤에 오타가 없는지 꼭 확인하세요!
   assets:
     - assets/background.png
     - assets/icon/bike_ui_dark.png
