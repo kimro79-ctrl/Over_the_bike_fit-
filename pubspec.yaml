@@ -1,46 +1,44 @@
 name: over_the_bike_fit
-description: "실시간 심박수 기반 바이크 핏 애플리케이션"
-publish_to: "none"
+description: "Indoor Bike Fitting App"
+publish_to: 'none'
 
-# 사용자님이 요청하신 빌드 버전
-version: 1.0.1+1702
+# 사용자님이 요청하신 1703 버전
+version: 1.0.1+1703
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.2
-  flutter_blue_plus: ^1.31.1
+  cupertino_icons: ^1.0.6
+  flutter_blue_plus: ^1.31.0
   permission_handler: ^11.3.0
+  shared_preferences: ^2.2.0
   fl_chart: ^0.66.0
   intl: ^0.19.0
-  shared_preferences: ^2.2.2
-  table_calendar: ^3.0.9
+  table_calendar: ^3.1.0
   flutter_native_splash: ^2.4.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-# 스플래시 화면 설정 (폴더 경로 정확히 반영)
-flutter_native_splash:
-  color: "#000000"
-  image: "assets/splash/splash_screen.png"  # splash 폴더 안의 파일명 확인
-  android_12:
-    image: "assets/splash/splash_screen.png"
-  fullscreen: true
-  android: true
-  ios: true
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
 
-  # 9시 12분 사진의 폴더 구조를 100% 반영한 에셋 등록
+  # 경로 뒤에 오타가 없는지 꼭 확인하세요!
   assets:
     - assets/background.png
-    - assets/icon/app_icon.png
-    - assets/icon/heart.png
     - assets/icon/bike_ui_dark.png
-    - assets/splash/splash_screen.png  # splash 폴더 경로 추가
+    - assets/splash/splash_screen.png
+
+flutter_native_splash:
+  color: "#000000"
+  background_image: "assets/background.png"
+  image: "assets/splash/splash_screen.png"
+  android_12:
+    image: "assets/splash/splash_screen.png"
+    icon_background_color: "#000000"
+  fullscreen: true
