@@ -1,44 +1,53 @@
-name: over_the_bike_fit
-description: "Indoor Bike Fit App"
-publish_to: 'none'
-# ✅ 1702 중복 에러 방지를 위해 1705으로 고정
-version: 1.0.1+1705
+name: over_the_bike_fit 
+description: 실시간 심박수 기반 바이크 핏 애플리케이션
+version: 1.0.1+1706
+publish_to: "none"
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: ">=3.6.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.6
-  flutter_blue_plus: ^1.31.0
+  cupertino_icons: ^1.0.2
+  flutter_blue_plus: ^1.31.1
   permission_handler: ^11.3.0
-  shared_preferences: ^2.2.0
   fl_chart: ^0.66.0
-  intl: ^0.19.0
-  table_calendar: ^3.1.0
-  flutter_native_splash: ^2.4.0
-
+  intl: ^0.19.0  # 
+  shared_preferences: ^2.2.2  #
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.0
+
+# ✅ 앱 아이콘 자동 생성 설정
+flutter_icons:
+  android: "launcher_icon"                      # Android 런처 아이콘 이름
+  ios: true                                     # iOS 아이콘 생성
+  image_path: "assets/icon/app_icon.png"        # 아이콘 원본 경로 (1024x1024 추천)
+  min_sdk_android: 21                           # 안드로이드 최소 SDK
+  remove_alpha_ios: true                        # iOS 투명 배경 제거
+  adaptive_icon_background: "#000000"           # 어댑티브 배경색 (검정)
+  adaptive_icon_foreground: "assets/icon/app_icon.png"  # 포그라운드 이미지
+
+# ✅ 스플래시 화면 설정
+flutter_native_splash:
+  color: "#000000"
+  image: "assets/splash/splash_screen.png"
+  android_12:
+    image: "assets/splash/splash_screen.png"
+  fullscreen: true
+  android: true
+  ios: true
 
 flutter:
   uses-material-design: true
-  # ✅ 칸 수를 정확히 맞췄습니다 (에셋 5개 정상 인식)
+
   assets:
     - assets/background.png
     - assets/icon/app_icon.png
     - assets/icon/heart.png
     - assets/icon/bike_ui_dark.png
     - assets/splash/splash_screen.png
-
-flutter_native_splash:
-  color: "#000000"
-  background_image: "assets/background.png"
-  image: "assets/splash/splash_screen.png"
-  android_12:
-    image: "assets/splash/splash_screen.png"
-    icon_background_color: "#000000"
-  fullscreen: true
