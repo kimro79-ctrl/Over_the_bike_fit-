@@ -1,4 +1,4 @@
-name: BikeFit Final Victory - Path Alignment
+name: BikeFit UI Fix - Victory Run
 
 on:
   workflow_dispatch:
@@ -32,8 +32,7 @@ jobs:
           mkdir -p android/app
           echo "$KEY_DATA" | tr -d '\n ' | base64 --decode > android/app/release.jks
 
-      - name: 🔧 key.properties 생성 (android/app 내부로 위치 조정)
-        # build.gradle과 같은 폴더에 두어 'path null' 오류를 원천 차단합니다.
+      - name: 🔧 key.properties 생성 (android/app 내부)
         run: |
           cat <<EOF > android/app/key.properties
           storePassword=Sodomaki80
@@ -42,12 +41,11 @@ jobs:
           storeFile=release.jks
           EOF
 
-      - name: 🔍 [선행 검증] Sodomaki80 지문 재확인
+      - name: 🔍 [선행 검증] Sodomaki80 지문 확인
         run: |
-          echo "목표: 75:CD:32:95:21:A1:35:86:C6:33:E7:ED:4E:F6:87:37:E2:D9:FD:3D"
           keytool -list -v -keystore android/app/release.jks -alias fresh-upload-key -storepass Sodomaki80 -keypass Sodomaki80 | grep SHA1
 
-      - name: 📑 [결정적 단계] build.gradle 직접 작성 (로컬 경로 참조)
+      - name: 📑 build.gradle 직접 작성 (로컬 참조)
         run: |
           cat <<'EOF' > android/app/build.gradle
           plugins {
@@ -79,8 +77,8 @@ jobs:
                   applicationId "com.overthebike.over_the_bike_fit"
                   minSdk 21
                   targetSdk 35
-                  versionCode 1700
-                  versionName "1.0.0"
+                  versionCode 1701  // 버전을 하나 올려주세요!
+                  versionName "1.0.1"
               }
 
               signingConfigs {
@@ -106,15 +104,11 @@ jobs:
           }
           EOF
 
-      - name: 🏗 AAB 빌드 실행 (Sodomaki80 서명 적용)
+      - name: 🏗 AAB 빌드 실행 (UI 수정본)
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      - name: 🔍 [최종 확인] 결과물 AAB 지문 대조
-        run: |
-          keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab | grep SHA1
-
-      - name: 📦 승리의 AAB 파일 업로드
+      - name: 📦 수정된 AAB 파일 업로드
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_Sodomaki80_Final_AAB
+          name: BikeFit_UI_Fixed_AAB
           path: build/app/outputs/bundle/release/app-release.aab
