@@ -15,13 +15,13 @@ void main() async {
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   await initializeDateFormatting('ko_KR', null);
   
-  // ✅ 앱 시작 시 권한 체크
-  await _checkPermissions();
+  // 앱 시작 시 블루투스/위치 권한 요청
+  await _requestPermissions();
   
   runApp(const BikeFitApp());
 }
 
-Future<void> _checkPermissions() async {
+Future<void> _requestPermissions() async {
   await [
     Permission.bluetoothScan,
     Permission.bluetoothConnect,
@@ -95,15 +95,15 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   void _showDeviceScanPopup() async {
     if (_isWatchConnected) return;
     
-    // ✅ 버튼 클릭 시 권한 재확인
+    // 권한 상태 다시 확인
     Map<Permission, PermissionStatus> statuses = await [
       Permission.bluetoothScan,
       Permission.bluetoothConnect,
       Permission.location
     ].request();
 
-    if (statuses.values.any((element) => element.isDenied)) {
-      _showToast("권한이 필요합니다.");
+    if (statuses.values.any((s) => s.isDenied)) {
+      _showToast("워치 연결을 위해 권한이 필요합니다.");
       return;
     }
 
@@ -218,7 +218,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
   Widget _connectButton() => GestureDetector(onTap: _showDeviceScanPopup, child: Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6), decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.greenAccent)), child: Text(_isWatchConnected ? "연결됨" : "워치 연결", style: const TextStyle(color: Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold))));
   
-  // ✅ 레이아웃 깨짐 방지를 위해 Container 높이 고정 및 배경 추가
   Widget _chartArea() => Container(
     height: 80, 
     decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(15)),
