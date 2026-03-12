@@ -1,8 +1,8 @@
 name: over_the_bike_fit
 description: "Indoor Bike Fit App"
 publish_to: 'none'
-# ✅ 1702 중복 에러 방지를 위해 1703으로 고정
-version: 1.0.1+1704
+# ✅ 1702 중복 에러 방지를 위해 1705으로 고정
+version: 1.0.1+1705
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
