@@ -1,4 +1,4 @@
-Name: BikeFit UI Fix - Victory Run
+Name: BikeFit UI Fix - 1704 Victory Run
 
 on:
   workflow_dispatch:
@@ -19,9 +19,11 @@ jobs:
         with:
           flutter-version: 3.27.1
 
-      - name: 🧹 [강력 클린] 이전 빌드 기록 완전 삭제
+      - name: 🧹 [강력 클린] 프로젝트 초기화
         run: |
+          # 기존 빌드 및 캐시 삭제
           flutter clean
+          # android 폴더가 있으면 삭제 후 재생성하여 충돌 방지
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           flutter pub get
@@ -33,7 +35,7 @@ jobs:
           mkdir -p android/app
           echo "$KEY_DATA" | tr -d '\n ' | base64 --decode > android/app/release.jks
 
-      - name: 🔧 key.properties 생성 (android/app 내부)
+      - name: 🔧 key.properties 생성
         run: |
           cat <<EOF > android/app/key.properties
           storePassword=Sodomaki80
@@ -80,8 +82,8 @@ jobs:
                   applicationId "com.overthebike.over_the_bike_fit"
                   minSdk 21
                   targetSdk 35
-                  // ✅ 1704로 버전을 올렸습니다.
-                  versionCode 1704  
+                  // ✅ 1704로 버전 업그레이드
+                  versionCode 1704
                   versionName "1.0.1"
               }
 
@@ -108,11 +110,11 @@ jobs:
           }
           EOF
 
-      - name: 🏗️ AAB 빌드 실행 (최종 클린 빌드)
+      - name: 🏗️ AAB 빌드 실행 (최종 수정본)
         run: flutter build appbundle --release --no-tree-shake-icons
 
       - name: 📦 빌드된 AAB 파일 업로드
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_1704_Final
+          name: BikeFit_1704_Final_AAB
           path: build/app/outputs/bundle/release/app-release.aab
