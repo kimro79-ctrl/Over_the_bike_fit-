@@ -1,6 +1,8 @@
 name: over_the_bike_fit
 description: "Indoor Bike Fit App"
 publish_to: 'none'
+
+# 구글 플레이 콘솔 에러를 해결하기 위한 새 버전 코드 1703
 version: 1.0.1+1703
 
 environment:
@@ -25,6 +27,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # 실제 폴더 구조와 대소문자까지 정확히 일치시켰습니다.
   assets:
     - assets/background.png
     - assets/icon/bike_ui_dark.png
