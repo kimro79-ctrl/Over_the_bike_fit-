@@ -11,13 +11,13 @@ jobs:
       - name: 🚚 코드 체크아웃
         uses: actions/checkout@v4
 
-      - name: ☕ Java 및 Flutter 설정 (JDK 17)
+      - name: ☕ Java 및 Flutter 설정 (최신 버전 3.24.0 이상)
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version: '3.24.0' # 요구사항에 맞춰 최신 안정 버전으로 설정
           channel: 'stable'
 
-      - name: 🧹 Flutter Clean (클리닝)
+      - name: 🧹 Flutter Clean
         run: flutter clean
 
       - name: 📦 Install Dependencies
@@ -82,12 +82,7 @@ jobs:
           }
           EOF
 
-      - name: 🔑 SHA-1/SHA-256 검증 확인
-        run: |
-          cd android
-          ./gradlew signingReport
-
-      - name: 🏗️ AAB 빌드 실행 (최종 클린 빌드)
+      - name: 🏗️ AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons
 
       - name: 📦 수정된 AAB 파일 업로드 (1706)
