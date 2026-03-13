@@ -1,4 +1,4 @@
-Name: BikeFit UI Fix - Victory Run (1706 Clean) 
+name: BikeFit UI Fix - Victory Run (1706 Clean) 
 
 on:
   workflow_dispatch: 
