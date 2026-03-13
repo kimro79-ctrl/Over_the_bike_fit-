@@ -1,7 +1,7 @@
-name: BikeFit UI Fix - Victory Run (1706 Clean) 
+name: BikeFit UI Fix - Victory Run (Auto Versioning)
 
 on:
-  workflow_dispatch: 
+  workflow_dispatch: # 수동으로 빌드 실행
 
 jobs:
   build:
@@ -18,6 +18,16 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.27.1 
+
+      - name: 🔢 빌드 번호 계산 (Base 1707 + Run Number)
+        id: version_logic
+        run: |
+          # 기본 1707부터 시작해서 빌드 횟수(run_number)만큼 더합니다.
+          # 첫 실행 시 1707 + 1 = 1708이 되도록 세팅 (원하시면 1706 + github.run_number로 조절 가능)
+          BASE_CODE=1706
+          NEW_CODE=$((BASE_CODE + ${{ github.run_number }}))
+          echo "FINAL_VERSION_CODE=$NEW_CODE" >> $GITHUB_ENV
+          echo "Generated Version Code: $NEW_CODE"
 
       - name: 🧹 [초강력 클린] 캐시 삭제 및 v2 임베딩 강제 초기화
         run: |
@@ -49,10 +59,10 @@ jobs:
         run: |
           keytool -list -v -keystore android/app/release.jks -alias fresh-upload-key -storepass Sodomaki80 -keypass Sodomaki80 | grep SHA1 
 
-      - name: 📑 build.gradle 직접 작성 (버전 1706 적용)
+      - name: 📑 build.gradle 직접 작성 (버전 자동 주입)
         run: |
-          # 파일을 새로 작성합니다. 마지막 EOF는 파일에 포함되지 않도록 주의합니다.
-          cat <<'EOF' > android/app/build.gradle
+          # 변수 오작동을 막기 위해 EOF_GRADLE 이라는 고유 태그를 사용합니다.
+          cat <<EOF_GRADLE > android/app/build.gradle
           plugins {
               id "com.android.application"
               id "kotlin-android"
@@ -82,7 +92,7 @@ jobs:
                   applicationId "com.overthebike.over_the_bike_fit"
                   minSdk 21
                   targetSdk 35
-                  versionCode 1706
+                  versionCode ${env.FINAL_VERSION_CODE}
                   versionName "1.0.1"
               } 
 
@@ -107,13 +117,13 @@ jobs:
           flutter {
               source '../..'
           }
-          EOF
+          EOF_GRADLE
 
-      - name: 🏗️ AAB 빌드 실행 (Clean UI 수정본)
+      - name: 🏗️ AAB 빌드 실행 (Version: ${{ env.FINAL_VERSION_CODE }})
         run: flutter build appbundle --release --no-tree-shake-icons 
 
-      - name: 📦 수정된 AAB 파일 업로드 (1706)
+      - name: 📦 수정된 AAB 파일 업로드
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_1706_Victory_AAB
-          path: build/app/outputs/bundle/release/app-release.aab 
+          name: BikeFit_v${{ env.FINAL_VERSION_CODE }}_Victory_AAB
+          path: build/app/outputs/bundle/release/app-release.aab
