@@ -1,4 +1,4 @@
-name: BikeFit UI Fix - Victory Run (1706 Clean)
+name: BikeFit UI Fix - Victory Run (1706 Final)
 
 on:
   push:
@@ -11,10 +11,9 @@ jobs:
       - name: 🚚 코드 체크아웃
         uses: actions/checkout@v4
 
-      - name: ☕ Java 및 Flutter 설정 (최신 버전으로 고정)
+      - name: ☕ Java 및 Flutter 설정 (최신 버전)
         uses: subosito/flutter-action@v2
         with:
-          # pubspec.yaml의 3.6.0 요구사항을 충족하기 위해 3.27.0 이상을 사용합니다.
           flutter-version: '3.27.0' 
           channel: 'stable'
 
@@ -23,6 +22,12 @@ jobs:
 
       - name: 📦 Install Dependencies
         run: flutter pub get
+
+      - name: 🛠️ Android v1 Embedding 제거 (에러 해결 핵심)
+        run: |
+          # AndroidManifest.xml에서 구식 flutterEmbedding 관련 메타데이터 삭제
+          sed -i '/android:name="io.flutter.app.android.MetaDataValueHolder"/d' android/app/src/main/AndroidManifest.xml
+          sed -i '/android:name="flutterEmbedding"/d' android/app/src/main/AndroidManifest.xml
 
       - name: 📄 build.gradle 직접 작성 (버전 1706 고정)
         run: |
