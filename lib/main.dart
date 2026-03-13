@@ -39,11 +39,11 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   @override
   void initState() {
     super.initState();
-    _initApp();
+    _initApp(); // 권한 요청 실행
   }
 
-  // 앱 실행 시 권한 요청
   Future<void> _initApp() async {
+    // 앱 실행 시 필수 권한 요청
     await [
       Permission.bluetoothConnect,
       Permission.bluetoothScan,
@@ -52,7 +52,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     ].request();
   }
 
-  // 시작/중지 버튼 로직
   void _toggleWorkout() {
     setState(() {
       _isWorkingOut = !_isWorkingOut;
@@ -60,10 +59,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         _timer = Timer.periodic(const Duration(seconds: 1), (t) {
           setState(() {
             _duration += const Duration(seconds: 1);
-            // 심박수 85 이상일 때만 칼로리 계산 (시뮬레이션 포함)
-            if (_isWatchConnected && _heartRate >= 85) {
-              _calories += (_heartRate * 0.0005);
-            }
+            if (_heartRate >= 85) _calories += (_heartRate * 0.0005);
           });
         });
       } else {
@@ -72,7 +68,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     });
   }
 
-  // 리셋 로직
   void _reset() {
     _timer?.cancel();
     setState(() {
@@ -88,22 +83,31 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       body: Container(
-        width: double.infinity,
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/background.png'), // 배경 이미지
+            image: AssetImage('assets/background.png'),
             fit: BoxFit.cover,
+            opacity: 0.4, // 배경을 어둡게 처리하여 UI 강조
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeaderAndGraph(), // 타이틀 + 그래프 결합 섹션
-              const Spacer(flex: 2),
-              _buildDataPanel(),      // 심박수/평균/칼로리/시간
-              const Spacer(flex: 1),
-              _buildBottomButtons(),  // 하단 버튼부
+              // 상단 타이틀 + 그래프 섹션
+              _buildHeaderWithGraph(),
+              
+              const Spacer(), // 가운데 자전거 이미지 삭제로 생긴 공간
+
+              // 데이터 표시 판넬 (4개 지표)
+              _buildStatsPanel(),
+
+              const SizedBox(height: 30),
+
+              // 하단 버튼부
+              _buildControlButtons(),
+              
               const SizedBox(height: 20),
             ],
           ),
@@ -112,49 +116,62 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     );
   }
 
-  // 1. 상단 타이틀 및 바로 아래 작은 그래프
-  Widget _buildHeaderAndGraph() {
+  // 상단 타이틀과 그 바로 아래 작은 그래프
+  Widget _buildHeaderWithGraph() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Indoor bike fit", 
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
-              _buildConnectButton(),
+              const Text("Indoor Bike Fit", 
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+              _buildConnectChip(),
             ],
           ),
-          const SizedBox(height: 10),
-          // 타이틀 바로 아래 위치한 작은 그래프
+          const SizedBox(height: 15),
           Container(
-            height: 80, // 크기를 작게 조절
+            height: 100,
             width: double.infinity,
-            padding: const EdgeInsets.only(top: 10),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.black38,
+              borderRadius: BorderRadius.circular(15),
+            ),
             child: _isWatchConnected 
-              ? LineChart(_smallChartData()) 
-              : const Center(child: Text("워치를 연결하면 그래프가 표시됩니다.", 
-                  style: TextStyle(color: Colors.white24, fontSize: 12))),
+              ? LineChart(_chartConfig()) 
+              : const Center(child: Text("워치를 연결하면 실시간 그래프가 표시됩니다.")),
           ),
         ],
       ),
     );
   }
 
-  // 2. 데이터 판넬 (4개 항목 가로 정렬)
-  Widget _buildDataPanel() {
+  // 빌드 에러의 원인이었던 _dataItem 함수를 다시 정의함
+  Widget _dataItem(String label, String value, Color color) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        const SizedBox(height: 8),
+        Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _buildStatsPanel() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 15),
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.black54,
-        borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: Colors.white10),
+        color: Colors.white10,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white12),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _dataItem("심박수", "$_heartRate", Colors.greenAccent),
           _dataItem("평균", "$_avgHeartRate", Colors.redAccent),
@@ -165,6 +182,75 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     );
   }
 
-  // 3. 하단 버튼부
-  Widget _buildBottomButtons() {
-    return Row
+  Widget _buildControlButtons() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _circleButton(_isWorkingOut ? Icons.pause : Icons.play_arrow, "시작", _toggleWorkout),
+        _circleButton(Icons.refresh, "리셋", _reset),
+        _circleButton(Icons.save, "저장", () {}),
+        _circleButton(Icons.calendar_month, "기록", () {
+          Navigator.push(context, MaterialPageRoute(builder: (c) => const HistoryScreen()));
+        }),
+      ],
+    );
+  }
+
+  // 보조 위젯들
+  Widget _buildConnectChip() {
+    return ActionChip(
+      label: Text(_isWatchConnected ? "연결됨" : "워치 연결"),
+      onPressed: () => setState(() => _isWatchConnected = !_isWatchConnected),
+      backgroundColor: _isWatchConnected ? Colors.cyanAccent.withOpacity(0.2) : Colors.white10,
+    );
+  }
+
+  Widget _circleButton(IconData icon, String label, VoidCallback onTap) {
+    return Column(
+      children: [
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(30),
+          child: Container(
+            width: 60, height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white12,
+              border: Border.all(color: Colors.white10),
+            ),
+            child: Icon(icon, color: Colors.white),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.white60)),
+      ],
+    );
+  }
+
+  LineChartData _chartConfig() {
+    return LineChartData(
+      gridData: FlGridData(show: false),
+      titlesData: FlTitlesData(show: false),
+      borderData: FlBorderData(show: false),
+      lineBarsData: [
+        LineChartBarData(
+          spots: _hrSpots, isCurved: true, color: Colors.cyanAccent, barWidth: 2, dotData: FlDotData(show: false),
+        )
+      ],
+    );
+  }
+
+  String _formatDuration(Duration d) => "${d.inMinutes}:${(d.inSeconds % 60).toString().padLeft(2, '0')}";
+}
+
+// 기록 리포트 화면
+class HistoryScreen extends StatelessWidget {
+  const HistoryScreen({Key? key}) : super(key: key);
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("기록 리포트")),
+      body: const Center(child: Text("저장된 기록이 없습니다.")),
+    );
+  }
+}
