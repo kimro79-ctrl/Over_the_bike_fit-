@@ -1,7 +1,7 @@
 name: BikeFit UI Fix - Victory Run (Auto Versioning)
 
 on:
-  workflow_dispatch: # 수동으로 빌드 실행
+  workflow_dispatch: 
 
 jobs:
   build:
@@ -19,11 +19,10 @@ jobs:
         with:
           flutter-version: 3.27.1 
 
-      - name: 🔢 빌드 번호 계산 (Base 1707 + Run Number)
+      - name: 🔢 빌드 번호 계산 (Base 1706 + Run Number)
         id: version_logic
         run: |
-          # 기본 1707부터 시작해서 빌드 횟수(run_number)만큼 더합니다.
-          # 첫 실행 시 1707 + 1 = 1708이 되도록 세팅 (원하시면 1706 + github.run_number로 조절 가능)
+          # 기본 1706부터 시작해서 빌드 횟수를 더합니다.
           BASE_CODE=1706
           NEW_CODE=$((BASE_CODE + ${{ github.run_number }}))
           echo "FINAL_VERSION_CODE=$NEW_CODE" >> $GITHUB_ENV
@@ -31,11 +30,8 @@ jobs:
 
       - name: 🧹 [초강력 클린] 캐시 삭제 및 v2 임베딩 강제 초기화
         run: |
-          # 1. 이전 빌드 찌꺼기 완전 삭제
           flutter clean
           rm -rf android
-          
-          # 2. 최신 Flutter 버전 기반으로 Android 프로젝트 재생성 (v2 임베딩 자동 적용)
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           flutter pub get 
 
@@ -61,7 +57,7 @@ jobs:
 
       - name: 📑 build.gradle 직접 작성 (버전 자동 주입)
         run: |
-          # 변수 오작동을 막기 위해 EOF_GRADLE 이라는 고유 태그를 사용합니다.
+          # env 변수를 쉘 스크립트 방식으로 안전하게 주입합니다.
           cat <<EOF_GRADLE > android/app/build.gradle
           plugins {
               id "com.android.application"
@@ -92,7 +88,7 @@ jobs:
                   applicationId "com.overthebike.over_the_bike_fit"
                   minSdk 21
                   targetSdk 35
-                  versionCode ${env.FINAL_VERSION_CODE}
+                  versionCode ${FINAL_VERSION_CODE}
                   versionName "1.0.1"
               } 
 
@@ -119,11 +115,11 @@ jobs:
           }
           EOF_GRADLE
 
-      - name: 🏗️ AAB 빌드 실행 (Version: ${{ env.FINAL_VERSION_CODE }})
+      - name: 🏗️ AAB 빌드 실행
         run: flutter build appbundle --release --no-tree-shake-icons 
 
       - name: 📦 수정된 AAB 파일 업로드
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_v${{ env.FINAL_VERSION_CODE }}_Victory_AAB
+          name: BikeFit_v${{ env.FINAL_VERSION_CODE }}_AAB
           path: build/app/outputs/bundle/release/app-release.aab
