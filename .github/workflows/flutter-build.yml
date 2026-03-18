@@ -22,7 +22,6 @@ jobs:
       - name: 🔢 빌드 번호 계산 (Base 1706 + Run Number)
         id: version_logic
         run: |
-          # 기본 1706부터 시작해서 빌드 횟수를 더합니다.
           BASE_CODE=1706
           NEW_CODE=$((BASE_CODE + ${{ github.run_number }}))
           echo "FINAL_VERSION_CODE=$NEW_CODE" >> $GITHUB_ENV
@@ -35,8 +34,8 @@ jobs:
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           flutter pub get 
 
-      # ==================== 워치 연결 권한 강제 적용 ====================
-      - name: 📝 워치 연결 권한 강제 적용 (BLUETOOTH_SCAN fix)
+      # ==================== 워치 연결 권한 + v2 embedding 강제 적용 ====================
+      - name: 📝 워치 연결 권한 및 v2 embedding 강제 적용
         run: |
           cat <<'EOF' > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -61,6 +60,11 @@ jobs:
                   android:name="${applicationName}"
                   android:icon="@mipmap/ic_launcher"
                   android:usesCleartextTraffic="true">
+
+                  <!-- Flutter v2 Embedding 강제 선언 (v1 에러 해결 핵심) -->
+                  <meta-data
+                      android:name="flutterEmbedding"
+                      android:value="2" />
 
                   <activity
                       android:name=".MainActivity"
@@ -102,7 +106,6 @@ jobs:
 
       - name: 📑 build.gradle 직접 작성 (버전 자동 주입)
         run: |
-          # env 변수를 쉘 스크립트 방식으로 안전하게 주입합니다.
           cat <<EOF_GRADLE > android/app/build.gradle
           plugins {
               id "com.android.application"
