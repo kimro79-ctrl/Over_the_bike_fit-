@@ -76,21 +76,34 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     super.initState();
     _loadInitialData();
 
-    // ✅ 사용자님 피드백 반영: UI 렌더링 후 권한 팝업 호출 (안드로이드 14 대응)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // 권한 요청을 UI가 완전히 그려진 후 조금 늦게 실행
+    Future.delayed(const Duration(milliseconds: 800), () {
       _requestPermissions();
     });
   }
 
-  // ✅ 안정적인 권한 요청 로직
+  // ✅ 강화된 권한 요청 로직 (Android 14 대응 + 설정 화면 자동 열기)
   Future<void> _requestPermissions() async {
     if (!Platform.isAndroid) return;
 
-    await [
-      Permission.bluetoothScan,
-      Permission.bluetoothConnect,
-      Permission.location,
-    ].request();
+    print("🔵 권한 요청 시작...");  // 디버그용 로그
+
+    // Bluetooth 권한 개별 요청
+    final scanStatus = await Permission.bluetoothScan.request();
+    final connectStatus = await Permission.bluetoothConnect.request();
+
+    // Android 12 미만에서는 Location도 필요할 수 있음
+    final locationStatus = await Permission.location.request();
+
+    print("Scan: $scanStatus | Connect: $connectStatus | Location: $locationStatus");
+
+    // 권한이 하나라도 허용되지 않으면 안내 + 설정 화면 열기
+    if (!scanStatus.isGranted || !connectStatus.isGranted) {
+      _showToast("워치 연결을 위해 '근처 기기' 권한이 필요합니다.\n설정에서 허용해주세요.");
+      await openAppSettings();   // 앱 권한 설정 화면 자동으로 열기
+    } else {
+      _showToast("권한 허용 완료! 이제 워치 연결이 가능합니다.");
+    }
   }
 
   Future<void> _loadInitialData() async {
@@ -112,8 +125,11 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     });
   }
 
-  // ====== 🔴 워치 스캔 (삼성 워치 및 BLE 최적화) ======
+  // ====== 🔴 워치 스캔 ======
   void _showDeviceScanPopup() async {
+    // 버튼을 누를 때마다 권한을 다시 한 번 확인
+    await _requestPermissions();
+
     if (await FlutterBluePlus.adapterState.first != BluetoothAdapterState.on) {
       _showToast("블루투스를 켜주세요");
       return;
@@ -136,7 +152,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         _scanSubscription = FlutterBluePlus.onScanResults.listen((results) {
           List<ScanResult> devices = [];
           for (var r in results) {
-            // 중복 제거 및 삼성 워치 등 이름 없는 기기 대응
             if (!devices.any((e) => e.device.remoteId == r.device.remoteId)) {
               devices.add(r);
             }
@@ -436,7 +451,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         _statItem("칼로리", _calories.toStringAsFixed(1), Colors.orangeAccent),
         _statItem(
             "시간",
-            "${_duration.inMinutes}:${(_duration.inSeconds % 60).toString().padLeft(2, '0')}",
+            "\( {_duration.inMinutes}: \){(_duration.inSeconds % 60).toString().padLeft(2, '0')}",
             Colors.blueAccent)
       ]));
 
