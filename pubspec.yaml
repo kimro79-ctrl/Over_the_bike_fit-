@@ -22,19 +22,21 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.1
   flutter_native_splash: ^2.4.0
 
-# ✅ 앱 아이콘 설정 (이미지가 assets 폴더에 있어야 함)
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
   image_path: "assets/icon/app_icon.png"
   min_sdk_android: 21
 
-# ✅ 스플래쉬 화면 설정
+# ==================== 스플래시 설정 (여기만 수정) ====================
 flutter_native_splash:
   color: "#000000"
   image: "assets/splash/splash_screen.png"
+  
   android_12:
-    image: "assets/splash/splash_screen.png"
+    color: "#000000"
+    image: "assets/splash/splash_screen.png"     # ← Android 12 이상 필수
+
   fullscreen: true
 
 flutter:
