@@ -63,16 +63,14 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   void initState() { 
     super.initState(); 
     _loadInitialData(); 
-    // 권한 요청 (근처 기기만)
     Timer.run(() => _requestPermissions());
   } 
 
-  // ✅ 근처 기기(블루투스) 권한만 요청하도록 수정
+  // ✅ Bluetooth 권한만 요청 (nearbyDevices 제거)
   Future<void> _requestPermissions() async {
     await [
       Permission.bluetoothScan,
       Permission.bluetoothConnect,
-      Permission.nearbyDevices,        // ← 추가
     ].request();
   }
 
@@ -97,11 +95,10 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   void _showDeviceScanPopup() async {
     if (_isWatchConnected) return;
     
-    // 근처 기기 권한 다시 요청
+    // ✅ Bluetooth 권한만 요청
     await [
       Permission.bluetoothScan,
       Permission.bluetoothConnect,
-      Permission.nearbyDevices,
     ].request();
 
     _filteredResults.clear();
@@ -114,13 +111,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))), 
       builder: (context) => StatefulBuilder(builder: (context, setModalState) {
         _scanSubscription = FlutterBluePlus.onScanResults.listen((results) { 
-          if (mounted) {
-            setModalState(() { 
-              _filteredResults = results
-                  .where((r) => r.device.platformName.isNotEmpty)
-                  .toList(); 
-            });
-          }
+          if (mounted) setModalState(() { 
+            _filteredResults = results.where((r) => r.device.platformName.isNotEmpty).toList(); 
+          }); 
         });
         return Container(
           padding: const EdgeInsets.all(20), 
@@ -166,9 +159,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     setState(() { _isWatchConnected = true; }); 
     List<BluetoothService> services = await device.discoverServices(); 
     for (var s in services) { 
-      if (s.uuid == Guid("180D")) {  // Heart Rate Service
+      if (s.uuid == Guid("180D")) { 
         for (var c in s.characteristics) { 
-          if (c.uuid == Guid("2A37")) {  // Heart Rate Measurement
+          if (c.uuid == Guid("2A37")) { 
             await c.setNotifyValue(true); 
             c.lastValueStream.listen(_decodeHR); 
           } 
@@ -222,8 +215,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 1))
     ); 
   } 
-
-  // ==================== 아래부터는 절대 수정하지 않음 ====================
 
   @override
   Widget build(BuildContext context) {
@@ -309,6 +300,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   Widget _actionBtn(IconData i, String l, VoidCallback t) => Column(children: [GestureDetector(onTap: t, child: Container(width: 55, height: 55, decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.white24)), child: Icon(i, color: Colors.white, size: 24))), const SizedBox(height: 6), Text(l, style: const TextStyle(fontSize: 10, color: Colors.white70))]);
 } 
 
+// ==================== HistoryScreen (절대 수정 안 함) ====================
 class HistoryScreen extends StatefulWidget {
   final List<WorkoutRecord> records;
   final VoidCallback onSync;
