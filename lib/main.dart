@@ -66,7 +66,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     Timer.run(() => _requestPermissions());
   } 
 
-  // ✅ Bluetooth 권한만 요청 (nearbyDevices 제거)
   Future<void> _requestPermissions() async {
     await [
       Permission.bluetoothScan,
@@ -94,13 +93,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
   void _showDeviceScanPopup() async {
     if (_isWatchConnected) return;
-    
-    // ✅ Bluetooth 권한만 요청
-    await [
-      Permission.bluetoothScan,
-      Permission.bluetoothConnect,
-    ].request();
-
+    await [Permission.bluetoothScan, Permission.bluetoothConnect].request();
     _filteredResults.clear();
     await FlutterBluePlus.startScan(timeout: const Duration(seconds: 15));
 
@@ -261,7 +254,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
   Widget _connectButton() => GestureDetector(onTap: _showDeviceScanPopup, child: Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6), decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.greenAccent)), child: Text(_isWatchConnected ? "연결됨" : "워치 연결", style: const TextStyle(color: Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold))));
   Widget _chartArea() => SizedBox(height: 60, child: LineChart(LineChartData(gridData: const FlGridData(show: false), titlesData: const FlTitlesData(show: false), borderData: FlBorderData(show: false), lineBarsData: [LineChartBarData(spots: _hrSpots.isEmpty ? [const FlSpot(0, 0)] : _hrSpots, isCurved: true, color: Colors.greenAccent, barWidth: 2, dotData: const FlDotData(show: false))])));
-  Widget _dataBanner() => Container(padding: const EdgeInsets.symmetric(vertical: 20), decoration: BoxDecoration(color: Colors.black.withOpacity(0.5), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white10)), child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [_statItem("심박수", "$_heartRate", Colors.greenAccent), _statItem("평균", "\( _avgHeartRate", Colors.redAccent), _statItem("칼로리", _calories.toStringAsFixed(1), Colors.orangeAccent), _statItem("시간", " \){_duration.inMinutes}:${(_duration.inSeconds % 60).toString().padLeft(2, '0')}", Colors.blueAccent)]));
+  
+  // ✅ 수정된 데이터 배너 (문자열 오타 수정)
+  Widget _dataBanner() => Container(padding: const EdgeInsets.symmetric(vertical: 20), decoration: BoxDecoration(color: Colors.black.withOpacity(0.5), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white10)), child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [_statItem("심박수", "$_heartRate", Colors.greenAccent), _statItem("평균", "$_avgHeartRate", Colors.redAccent), _statItem("칼로리", _calories.toStringAsFixed(1), Colors.orangeAccent), _statItem("시간", "${_duration.inMinutes}:${(_duration.inSeconds % 60).toString().padLeft(2, '0')}", Colors.blueAccent)]));
   Widget _statItem(String l, String v, Color c) => Column(children: [Text(l, style: const TextStyle(fontSize: 10, color: Colors.white60)), const SizedBox(height: 6), Text(v, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: c))]);
   
   Widget _controlButtons() => Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -270,7 +265,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         _isWorkingOut = !_isWorkingOut; 
         if (_isWorkingOut) { 
           _workoutTimer = Timer.periodic(const Duration(seconds: 1), (t) {
-            setState(() { _duration += const Duration(seconds: 1); if (_heartRate >= 95) { _calories += 0.15; } }); 
+            setState(() { _duration += const Duration(seconds: 1); if (_heartRate >= 80) { _calories += 0.15; } }); 
           }); 
         } else { _workoutTimer?.cancel(); } 
       }); 
@@ -300,7 +295,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   Widget _actionBtn(IconData i, String l, VoidCallback t) => Column(children: [GestureDetector(onTap: t, child: Container(width: 55, height: 55, decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.white24)), child: Icon(i, color: Colors.white, size: 24))), const SizedBox(height: 6), Text(l, style: const TextStyle(fontSize: 10, color: Colors.white70))]);
 } 
 
-// ==================== HistoryScreen (절대 수정 안 함) ====================
 class HistoryScreen extends StatefulWidget {
   final List<WorkoutRecord> records;
   final VoidCallback onSync;
@@ -397,7 +391,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final dailyRecords = _currentRecords.where((r) => r.date == DateFormat('yyyy-MM-dd').format(_selectedDay!)).toList(); 
-
     return Theme(
       data: ThemeData(brightness: Brightness.light),
       child: Scaffold(
