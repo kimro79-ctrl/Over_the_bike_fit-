@@ -19,7 +19,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: ^0.13.1         # ← 여기 버전 업그레이드 (blank icon 이슈 패치)
+  flutter_launcher_icons: ^0.14.4         # ← 여기 버전 업그레이드 (blank icon 이슈 패치)
   flutter_native_splash: ^2.4.0
 
 flutter_launcher_icons:
@@ -27,7 +27,7 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/icon/app_icon.png"
   min_sdk_android: 21
-  adaptive_icon_background: "#000000"      # ← 추가: 배경색 (검정 추천, 앱 테마에 맞게 바꿔도 OK)
+  adaptive_icon_background: "#FFFFFF"      # ← 추가: 배경색 (검정 추천, 앱 테마에 맞게 바꿔도 OK)
   adaptive_icon_foreground: "assets/icon/app_icon.png"  # ← 추가: 전경(로고) 이미지
 
 # ==================== 스플래시 설정 (여기만 수정) ====================
