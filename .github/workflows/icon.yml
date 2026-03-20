@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -34,4 +36,4 @@ jobs:
           git config --global user.email "github-actions@github.com"
           git add android/app/src/main/res/
           git commit -m "자동 아이콘 생성" || echo "No changes"
-          git push
+          git push origin main
