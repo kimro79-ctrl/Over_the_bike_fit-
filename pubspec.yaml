@@ -1,6 +1,6 @@
 name: over_the_bike_fit
 description: 실시간 심박수 기반 바이크 핏 애플리케이션
-version: 1.0.1+1707
+version: 1.0.1+1708
 
 environment:
   sdk: ">=3.5.0 <4.0.0"
