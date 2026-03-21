@@ -1,5 +1,5 @@
 name: over_the_bike_fit
-description: 실시간 심박수 기반 바이크 핏 애플리케이션
+description: 실시간 심박수 기반 바이크 피트니스 애플리케이션
 version: 1.0.1+1708
 
 environment:
@@ -19,26 +19,24 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: ^0.14.4         # ← 여기 버전 업그레이드 (blank icon 이슈 패치)
+  flutter_launcher_icons: ^0.13.1
   flutter_native_splash: ^2.4.0
 
+# 아이콘 생성 설정 (UI에 영향 없음)
 flutter_launcher_icons:
-  android: "launcher_icon"                 # ← true 대신 문자열로 (추천)
+  android: "launcher_icon"
   ios: true
   image_path: "assets/icon/app_icon.png"
   min_sdk_android: 21
-  adaptive_icon_background: "#FFFFFF"      # ← 추가: 배경색 (검정 추천, 앱 테마에 맞게 바꿔도 OK)
-  adaptive_icon_foreground: "assets/icon/app_icon.png"  # ← 추가: 전경(로고) 이미지
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
 
-# ==================== 스플래시 설정 (여기만 수정) ====================
 flutter_native_splash:
-  color: "#000000"
+  color: "#010101"
   image: "assets/splash/splash_screen.png"
-  
   android_12:
-    color: "#000000"
-    image: "assets/splash/splash_screen.png"     # ← Android 12 이상 필수
-
+    color: "#010101"
+    image: "assets/splash/splash_screen.png"
   fullscreen: true
 
 flutter:
