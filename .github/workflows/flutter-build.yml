@@ -25,35 +25,27 @@ jobs:
           BASE_CODE=1706
           NEW_CODE=$((BASE_CODE + ${{ github.run_number }}))
           echo "FINAL_VERSION_CODE=$NEW_CODE" >> $GITHUB_ENV
-          echo "Generated Version Code: $NEW_CODE"
 
-      - name: 🧹 [초강력 클린] 캐시 삭제 및 v2 임베딩 강제 초기화
+      - name: 🧹 [초강력 클린] 캐시 삭제 및 초기화
         run: |
           flutter clean
           rm -rf android
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           flutter pub get 
 
-      - name: 🎨 앱 아이콘 자동 생성 (flutter_launcher_icons)
-        run: |
-          flutter pub run flutter_launcher_icons
+      - name: 🎨 앱 아이콘 자동 생성
+        run: flutter pub run flutter_launcher_icons
 
-      # ==================== 워치 연결 권한 + v2 embedding 해결 ====================
-      - name: 📝 워치 연결 권한 및 v2 embedding 강제 적용
+      - name: 📝 Android 설정 적용 (아이콘 연결)
         run: |
           cat <<'EOF' > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
               package="com.overthebike.over_the_bike_fit">
-
               <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
-
-              <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
-                               android:usesPermissionFlags="neverForLocation" />
+              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
               <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-
               <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
               <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
-
               <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
               <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="28" />
 
@@ -62,11 +54,7 @@ jobs:
                   android:name="${applicationName}"
                   android:icon="@mipmap/launcher_icon"
                   android:usesCleartextTraffic="true">
-
-                  <meta-data
-                      android:name="flutterEmbedding"
-                      android:value="2" />
-
+                  <meta-data android:name="flutterEmbedding" android:value="2" />
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
@@ -83,7 +71,6 @@ jobs:
               </application>
           </manifest>
           EOF
-      # =================================================================
 
       - name: 🔑 Keystore 복원
         env:
@@ -91,9 +78,6 @@ jobs:
         run: |
           mkdir -p android/app
           echo "$KEY_DATA" | tr -d '\n ' | base64 --decode > android/app/release.jks 
-
-      - name: 🔧 key.properties 생성
-        run: |
           cat <<EOF > android/app/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
@@ -101,11 +85,7 @@ jobs:
           storeFile=release.jks
           EOF 
 
-      - name: 🔍 [검증] SHA-1 지문 확인
-        run: |
-          keytool -list -v -keystore android/app/release.jks -alias fresh-upload-key -storepass Sodomaki80 -keypass Sodomaki80 | grep SHA1 
-
-      - name: 📑 build.gradle 직접 작성 (버전 자동 주입)
+      - name: 📑 build.gradle 직접 작성 (Java 17 강제 설정)
         run: |
           cat <<EOF_GRADLE > android/app/build.gradle
           plugins {
@@ -123,6 +103,15 @@ jobs:
           android {
               namespace "com.overthebike.over_the_bike_fit"
               compileSdk 35 
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              } 
+
+              kotlinOptions {
+                  jvmTarget = '17'
+              } 
 
               defaultConfig {
                   applicationId "com.overthebike.over_the_bike_fit"
