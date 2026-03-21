@@ -34,7 +34,6 @@ jobs:
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           flutter pub get 
 
-      # ✨ [추가] 아이콘 파일 물리적 생성 (ios: false 설정으로 에러 방지됨)
       - name: 🎨 앱 아이콘 자동 생성 (flutter_launcher_icons)
         run: |
           flutter pub run flutter_launcher_icons
@@ -62,7 +61,6 @@ jobs:
                   android:label="Indoor bike fit"
                   android:name="${applicationName}"
                   android:icon="@mipmap/launcher_icon"
-                  android:roundIcon="@mipmap/launcher_icon_round"
                   android:usesCleartextTraffic="true">
 
                   <meta-data
