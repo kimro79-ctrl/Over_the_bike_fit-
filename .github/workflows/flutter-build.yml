@@ -1,4 +1,4 @@
-name: BikeFit AAB Build - Asset & V2 Fixed
+name: BikeFit AAB Build - Asset & V2 Victory
 
 on:
   workflow_dispatch: 
@@ -14,7 +14,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17 
+          java-version: 17
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.27.1 
@@ -26,19 +26,19 @@ jobs:
           NEW_CODE=$((BASE_CODE + ${{ github.run_number }}))
           echo "FINAL_VERSION_CODE=$NEW_CODE" >> $GITHUB_ENV
 
-      - name: 🧹 패키지 로드 및 초기화
+      - name: 🧹 [클린 빌드] 패키지 로드
         run: |
           flutter clean
           flutter pub get 
 
-      - name: 🎨 앱 아이콘 생성 (Assets 참조)
+      - name: 🎨 앱 아이콘 자동 생성 (Assets 참조)
         run: |
-          # pubspec.yaml의 image_path: "assets/icon/app_icon.png" 설정을 사용하여 아이콘 생성
+          # pubspec.yaml의 assets/icon/app_icon.png를 사용하여 아이콘 생성
           flutter pub run flutter_launcher_icons
 
-      - name: 📝 AndroidManifest v2 Embedding 및 아이콘 경로 강제 수정
+      - name: 📝 Android 설정 적용 (v2 Embedding & 아이콘 고정)
         run: |
-          # 빌드 에러를 방지하기 위해 v2 embedding 설정을 강제로 박습니다.
+          # V1 관련 오류를 막기 위해 v2 설정을 강제로 박습니다.
           cat <<'EOF' > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
               package="com.overthebike.over_the_bike_fit">
@@ -90,8 +90,9 @@ jobs:
           storeFile=release.jks
           EOF 
 
-      - name: 📑 build.gradle 직접 작성 (Java 17 고정)
+      - name: 📑 build.gradle 작성 (Java 17 버전 불일치 해결)
         run: |
+          # jvmTarget 17 설정을 통해 컴파일 에러를 방지합니다.
           cat <<EOF_GRADLE > android/app/build.gradle
           plugins {
               id "com.android.application"
@@ -149,11 +150,11 @@ jobs:
           }
           EOF_GRADLE
 
-      - name: 🏗️ AAB 빌드 실행
+      - name: 🏗️ AAB 빌드 실행 (flutter build appbundle)
         run: flutter build appbundle --release --no-tree-shake-icons 
 
       - name: 📦 최종 AAB 파일 업로드
         uses: actions/upload-artifact@v4
         with:
-          name: BikeFit_v${{ env.FINAL_VERSION_CODE }}
+          name: BikeFit_v${{ env.FINAL_VERSION_CODE }}_AAB
           path: build/app/outputs/bundle/release/app-release.aab
