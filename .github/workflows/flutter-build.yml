@@ -22,7 +22,6 @@ jobs:
       - name: 🔢 빌드 번호 계산 (Base 1706 + Run Number)
         id: version_logic
         run: |
-          # 기본 1706부터 시작해서 빌드 횟수를 더합니다.
           BASE_CODE=1706
           NEW_CODE=$((BASE_CODE + ${{ github.run_number }}))
           echo "FINAL_VERSION_CODE=$NEW_CODE" >> $GITHUB_ENV
@@ -35,6 +34,11 @@ jobs:
           flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
           flutter pub get 
 
+      # 1. [핵심 추가] 이 코드가 없으면 아이콘 파일이 생성되지 않습니다.
+      - name: 🎨 앱 아이콘 자동 생성 (flutter_launcher_icons)
+        run: |
+          flutter pub run flutter_launcher_icons
+
       # ==================== 워치 연결 권한 + v2 embedding 해결 ====================
       - name: 📝 워치 연결 권한 및 v2 embedding 강제 적용
         run: |
@@ -44,12 +48,10 @@ jobs:
 
               <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
 
-              <!-- 스마트워치 연결 핵심 권한 -->
               <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
                                android:usesPermissionFlags="neverForLocation" />
               <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
-              <!-- 구버전 호환 -->
               <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
               <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
 
@@ -59,10 +61,11 @@ jobs:
               <application
                   android:label="Indoor bike fit"
                   android:name="${applicationName}"
-                  android:icon="@mipmap/ic_launcher"
+                  # 2. [수정] 아이콘 파일 이름을 설정값에 맞게 변경했습니다.
+                  android:icon="@mipmap/launcher_icon"
+                  android:roundIcon="@mipmap/launcher_icon_round"
                   android:usesCleartextTraffic="true">
 
-                  <!-- Flutter v2 Embedding 강제 선언 (v1 에러 해결 핵심) -->
                   <meta-data
                       android:name="flutterEmbedding"
                       android:value="2" />
@@ -107,7 +110,6 @@ jobs:
 
       - name: 📑 build.gradle 직접 작성 (버전 자동 주입)
         run: |
-          # env 변수를 쉘 스크립트 방식으로 안전하게 주입합니다.
           cat <<EOF_GRADLE > android/app/build.gradle
           plugins {
               id "com.android.application"
