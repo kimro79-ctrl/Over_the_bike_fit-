@@ -1,19 +1,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.over_the_bike_fit">
+    package="com.overthebike.over_the_bike_fit">
 
-    <!-- BLE 기능 선언 -->
+    <!-- BLE 기능 -->
     <uses-feature
         android:name="android.hardware.bluetooth_le"
         android:required="false" />
 
-    <!-- Android 12+ (API 31 이상) 필수 권한 -->
+    <!-- Android 12+ -->
     <uses-permission
         android:name="android.permission.BLUETOOTH_SCAN"
-        android:usesPermissionFlags="neverForLocation" />   <!-- 이 줄이 핵심! -->
-
+        android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
-    <!-- Android 11 이하 호환용 (30 이하에서만 적용) -->
+    <!-- Android 11 이하 -->
     <uses-permission
         android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30" />
@@ -21,7 +20,7 @@
         android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
 
-    <!-- 위치 권한 (Android 11 이하에서 BLE 스캔에 필요할 수 있음) -->
+    <!-- 위치 권한 -->
     <uses-permission
         android:name="android.permission.ACCESS_FINE_LOCATION"
         android:maxSdkVersion="30" />
@@ -32,8 +31,13 @@
     <application
         android:label="Indoor bike fit"
         android:name="${applicationName}"
-        android:icon="@mipmap/launcher_icon"   <!-- ← 여기 수정! ic_launcher → launcher_icon -->
+        android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
+
+        <!-- Flutter embedding -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
 
         <activity
             android:name=".MainActivity"
@@ -48,6 +52,7 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
         </activity>
     </application>
 
