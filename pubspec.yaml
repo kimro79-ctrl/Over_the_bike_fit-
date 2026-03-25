@@ -15,7 +15,7 @@ dependencies:
   intl: ^0.19.0
   shared_preferences: ^2.2.2
   table_calendar: ^3.1.2
-  # ✅ 실외 주행 및 지도 기능을 위해 추가된 라이브러리
+  # ✅ 빌드 에러 해결을 위해 추가된 핵심 패키지
   flutter_map: ^6.1.0
   latlong2: ^0.9.1
   geolocator: ^11.0.0
