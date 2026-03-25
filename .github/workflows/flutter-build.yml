@@ -1,182 +1,66 @@
-name: BikeFit UI Fix - Victory Run (Auto Versioning)
+name: BikeFit Final Stable Build
 
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: 📥 코드 체크아웃
-        uses: actions/checkout@v4 
+        uses: actions/checkout@v4
 
-      - name: ☕ Java 및 Flutter 설정 (JDK 17)
+      - name: ☕ Java 설정 (JDK 17)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
-      - uses: subosito/flutter-action@v2
+
+      - name: 🚀 Flutter 설정
+        uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.27.1 
+          flutter-version: 3.27.1
 
-      - name: 🔢 빌드 번호 계산 (Base 1706 + Run Number)
-        id: version_logic
-        run: |
-          BASE_CODE=1706
-          NEW_CODE=$((BASE_CODE + ${{ github.run_number }}))
-          echo "FINAL_VERSION_CODE=$NEW_CODE" >> $GITHUB_ENV
+      # 🔥 핵심 수정 1: 캐시 완전 초기화
+      - name: 🧨 Pub 캐시 제거
+        run: rm -rf ~/.pub-cache
 
-      - name: 🧹 [초강력 클린] 캐시 삭제 및 초기화
-        run: |
-          flutter clean
-          rm -rf android
-          flutter create . --platforms android --org com.overthebike --project-name over_the_bike_fit
-          flutter pub get 
+      # 🔥 핵심 수정 2: 정상적인 초기화
+      - name: 🧹 Clean
+        run: flutter clean
 
-      # 🔥 핵심: 아이콘 자동생성 제거 → 강제 적용
-      - name: 🎯 아이콘 강제 적용
-        run: |
-          mkdir -p android/app/src/main/res/mipmap-mdpi
-          mkdir -p android/app/src/main/res/mipmap-hdpi
-          mkdir -p android/app/src/main/res/mipmap-xhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+      - name: 📦 의존성 설치 (핵심)
+        run: flutter pub get
 
-          cp assets/icon/app_icon.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          cp assets/icon/app_icon.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          cp assets/icon/app_icon.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          cp assets/icon/app_icon.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          cp assets/icon/app_icon.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+      - name: 🔍 패키지 검증
+        run: flutter pub deps
 
-      - name: 📝 Android 설정 적용 (아이콘 연결)
-        run: |
-          cat <<'EOF' > android/app/src/main/AndroidManifest.xml
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-              package="com.overthebike.over_the_bike_fit">
+      # 🔢 버전 자동 증가
+      - name: 🔢 빌드 번호 생성
+        run: echo "FINAL_VERSION_CODE=$((1706 + $GITHUB_RUN_NUMBER))" >> $GITHUB_ENV
 
-              <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
-              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
-              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-              <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
-              <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
-              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
-              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="28" />
-
-              <application
-                  android:label="Indoor bike fit"
-                  android:name="${applicationName}"
-                  android:icon="@mipmap/ic_launcher"
-                  android:usesCleartextTraffic="true">
-
-                  <meta-data android:name="flutterEmbedding" android:value="2"/>
-
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true"
-                      android:launchMode="singleTop"
-                      android:theme="@style/LaunchTheme"
-                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-                      android:hardwareAccelerated="true"
-                      android:windowSoftInputMode="adjustResize">
-
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN"/>
-                          <category android:name="android.intent.category.LAUNCHER"/>
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOF
-
-      # 🔥 V1 완전 차단 (필수)
-      - name: 🔥 MainActivity V2 강제 적용
-        run: |
-          mkdir -p android/app/src/main/kotlin/com/overthebike/over_the_bike_fit
-          cat <<EOF > android/app/src/main/kotlin/com/overthebike/over_the_bike_fit/MainActivity.kt
-          package com.overthebike.over_the_bike_fit
-
-          import io.flutter.embedding.android.FlutterActivity
-
-          class MainActivity: FlutterActivity() {
-          }
-          EOF
-
+      # 🔑 Keystore 복원
       - name: 🔑 Keystore 복원
         env:
           KEY_DATA: ${{ secrets.RELEASE_KEYSTORE }}
         run: |
           mkdir -p android/app
-          echo "$KEY_DATA" | tr -d '\n ' | base64 --decode > android/app/release.jks 
+          echo "$KEY_DATA" | base64 --decode > android/app/release.jks
+
           cat <<EOF > android/app/key.properties
           storePassword=Sodomaki80
           keyPassword=Sodomaki80
           keyAlias=fresh-upload-key
           storeFile=release.jks
-          EOF 
+          EOF
 
-      - name: 📑 build.gradle 직접 작성 (Java 17 강제 설정)
-        run: |
-          cat <<EOF_GRADLE > android/app/build.gradle
-          plugins {
-              id "com.android.application"
-              id "kotlin-android"
-              id "dev.flutter.flutter-gradle-plugin"
-          } 
+      # 🏗️ 빌드
+      - name: 🏗️ AAB 빌드
+        run: flutter build appbundle --release
 
-          def keystoreProperties = new Properties()
-          def keystorePropertiesFile = project.file('key.properties')
-          if (keystorePropertiesFile.exists()) {
-              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-          } 
-
-          android {
-              namespace "com.overthebike.over_the_bike_fit"
-              compileSdk 35 
-
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_17
-                  targetCompatibility JavaVersion.VERSION_17
-              } 
-
-              kotlinOptions {
-                  jvmTarget = '17'
-              } 
-
-              defaultConfig {
-                  applicationId "com.overthebike.over_the_bike_fit"
-                  minSdk 21
-                  targetSdk 35
-                  versionCode ${FINAL_VERSION_CODE}
-                  versionName "1.0.1"
-              } 
-
-              signingConfigs {
-                  release {
-                      keyAlias keystoreProperties['keyAlias']
-                      keyPassword keystoreProperties['keyPassword']
-                      storeFile file(keystoreProperties['storeFile'])
-                      storePassword keystoreProperties['storePassword']
-                  }
-              } 
-
-              buildTypes {
-                  release {
-                      signingConfig signingConfigs.release
-                      minifyEnabled false
-                      shrinkResources false
-                  }
-              }
-          } 
-
-          flutter {
-              source '../..'
-          }
-          EOF_GRADLE
-
-      - name: 🏗️ AAB 빌드 실행
-        run: flutter build appbundle --release --no-tree-shake-icons 
-
-      - name: 📦 수정된 AAB 파일 업로드
+      # 📦 업로드
+      - name: 📦 AAB 업로드
         uses: actions/upload-artifact@v4
         with:
           name: BikeFit_v${{ env.FINAL_VERSION_CODE }}_AAB
